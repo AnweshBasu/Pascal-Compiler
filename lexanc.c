@@ -70,7 +70,7 @@ TOKEN identifier (TOKEN tok)
 
 TOKEN getstring (TOKEN tok)
   {
-    /* Consume the signle quote that we peeked */
+    /* Consume the single quote that we peeked */
     getchar();
 
     int i;
@@ -94,11 +94,7 @@ TOKEN getstring (TOKEN tok)
     tok->tokentype = STRINGTOK;
     tok->stringval[i] = '\0';
     tok->datatype = STRINGTYPE;
-
-    printf("%s\n", tok->stringval);
     return tok;
-
-    printf("Called getstring");
     }
 
 TOKEN special (TOKEN tok)
