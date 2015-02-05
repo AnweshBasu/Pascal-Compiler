@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
 #include "token.h"
 #include "lexan.h"
 
@@ -41,7 +42,25 @@ void skipblanks ()
       while ((c = peekchar()) != EOF
              && (c == ' ' || c == '\n' || c == '\t'))
           getchar();
-    }
+
+      /* Consume comments -- doesn't handles nesting */
+      const char OPEN_COMM = '{';
+      const char CLOSE_COMM = '}';
+      bool comment = false;
+
+      if(peekchar() == OPEN_COMM) comment = true;
+
+      while ((c = peekchar()) != EOF && comment) {
+        // printf("In Skip Comments\n");
+        getchar();
+        if(c == CLOSE_COMM) {
+          comment = false;
+          if(peekchar() != OPEN_COMM)
+            getchar();
+          skipblanks();
+        }
+      }
+  }
 
 /* Get identifiers and reserved words */
 TOKEN identifier (TOKEN tok)
