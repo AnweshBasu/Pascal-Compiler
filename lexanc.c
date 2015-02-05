@@ -76,12 +76,15 @@ TOKEN getstring (TOKEN tok)
     int i;
     char c;
     for(i = 0; i < 16; i++) {
-      if((c = peekchar()) == '\'') {
+      c = peekchar();
+      if(c == EOF) break;
+      else if(c == '\'') {
         if(peek2char() == '\'')  {
           tok->stringval[i] = c;
           getchar();
         }
         else {
+          getchar();
           break;
         }
       }
