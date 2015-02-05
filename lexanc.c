@@ -46,16 +46,34 @@ void skipblanks ()
       /* Consume comments -- doesn't handles nesting */
       const char OPEN_COMM = '{';
       const char CLOSE_COMM = '}';
+      const char OPEN1_COMM = '(';
+      const char STAR_COMM = '*';
+      const char CLOSE1_COMM = ')';
       bool comment = false;
 
       if(peekchar() == OPEN_COMM) comment = true;
 
       while ((c = peekchar()) != EOF && comment) {
-        // printf("In Skip Comments\n");
         getchar();
         if(c == CLOSE_COMM) {
           comment = false;
-          if(peekchar() != OPEN_COMM)
+          if((peekchar() != OPEN1_COMM && peek2char() != STAR_COMM) && peekchar() != OPEN_COMM)
+            getchar();
+          skipblanks();
+        }
+      }
+
+      /* Consumes the (* *) version of comments */
+      comment = false;
+
+      if(peekchar() == OPEN1_COMM && peek2char() == STAR_COMM) comment = true;
+
+      while((c = peekchar()) != EOF && comment) {
+        getchar();
+        if(c == STAR_COMM && peekchar() == CLOSE1_COMM) {
+          getchar();
+          comment = false;
+          if((peekchar() != OPEN1_COMM && peek2char() != STAR_COMM) && peekchar() != OPEN_COMM)
             getchar();
           skipblanks();
         }
