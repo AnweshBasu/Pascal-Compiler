@@ -43,7 +43,7 @@ void skipblanks ()
              && (c == ' ' || c == '\n' || c == '\t'))
           getchar();
 
-      /* Consume comments -- doesn't handles nesting */
+      /* Consume the { } version of comments -- doesn't handles nesting */
       const char OPEN_COMM = '{';
       const char CLOSE_COMM = '}';
       const char OPEN1_COMM = '(';
@@ -54,13 +54,13 @@ void skipblanks ()
       if(peekchar() == OPEN_COMM) comment = true;
 
       while ((c = peekchar()) != EOF && comment) {
-        getchar();
         if(c == CLOSE_COMM) {
           comment = false;
           if((peekchar() != OPEN1_COMM && peek2char() != STAR_COMM) && peekchar() != OPEN_COMM)
             getchar();
           skipblanks();
         }
+        else getchar();
       }
 
       /* Consumes the (* *) version of comments */
@@ -71,7 +71,6 @@ void skipblanks ()
       while((c = peekchar()) != EOF && comment) {
         getchar();
         if(c == STAR_COMM && peekchar() == CLOSE1_COMM) {
-          getchar();
           comment = false;
           if((peekchar() != OPEN1_COMM && peek2char() != STAR_COMM) && peekchar() != OPEN_COMM)
             getchar();
