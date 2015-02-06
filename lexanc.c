@@ -28,6 +28,12 @@
 #include "token.h"
 #include "lexan.h"
 
+#define MAX_STRING_LEN 16
+#define NUM_RESERVED_WORDS 29
+#define NUM_OPERATORS 6
+
+void getWholeString(char * buf, int len);
+
 /* This file will work as given with an input file consisting only
    of integers separated by blanks:
    make lex1
@@ -82,8 +88,45 @@ void skipblanks ()
 /* Get identifiers and reserved words */
 TOKEN identifier (TOKEN tok)
   {
-    printf("Called identifier");
+    /* First check for a reserved word */
+    char string[MAX_STRING_LEN];
+    getWholeString(string,MAX_STRING_LEN);
+
+    const char* operators[NUM_OPERATORS] = {"and", "or", "not", "div", "mod", "in"};
+
+    const char* rWords[NUM_RESERVED_WORDS] = 
+                                 {"array", "begin", "case", "const", "do",
+                                  "downto", "else", "end", "file", "for",
+                                  "function", "goto", "if", "label", "nil",
+                                  "of", "packed", "procedure", "program", "record",
+                                  "repeat", "set", "then", "to", "type",
+                                  "until", "var", "while", "with"
+                                  };
+
+    int i;
+
+    /* Check for reserved words */
+    for(i = 0; i < NUM_RESERVED_WORDS; i++) {
+      /* We found a reserved word */
+      if(strcmp(string, rWords[i]) == 0) {
+        tok->tokentype = RESERVED;
+        tok->whichval = i + 1;
+        /* TODO Verify that this is an integer type */
+        tok->datatype = INTEGER;
+        return tok;
+      }
     }
+
+    /* Check for worded operators */
+    for(i = 0; i < NUM_OPERATORS; i++) {
+      if(strcmp(string, operators[i]) == 0) {
+        tok->tokentype = OPERATOR;
+        tok->whichval = i + (OR - OPERATOR_BIAS) - 1;
+        tok->datatype = INTEGER;
+        return tok;
+      }
+    }
+  }
 
 TOKEN getstring (TOKEN tok)
   {
@@ -137,5 +180,23 @@ TOKEN number (TOKEN tok)
     tok->datatype = INTEGER;
     tok->intval = num;
     return (tok);
+  }
+
+  void getWholeString(char * buf, int len) {
+    // printf("Len: %d\n", len);
+    int i;
+    char c, cclass;
+    for(i = 0; i < len; i++) {
+      c = peekchar();
+      cclass = CHARCLASS[c];
+      if(cclass == ALPHA || cclass == NUMERIC) {
+        buf[i] = getchar();
+      }
+      else {
+        break;
+      }
+    }
+    buf[i] = '\0';
+    // printf("i = %d, obtained string: %s\n",i, buf);
   }
 
