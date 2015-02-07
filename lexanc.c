@@ -182,6 +182,10 @@ TOKEN number (TOKEN tok)
     tok->tokentype = NUMBERTOK;
     tok->datatype = INTEGER;
     tok->intval = num;
+
+    /* Extending new feature*/ 
+    int stuff;
+    // yeah
     return (tok);
   }
 
