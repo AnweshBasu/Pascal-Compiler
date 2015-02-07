@@ -163,6 +163,9 @@ TOKEN getstring (TOKEN tok)
 TOKEN special (TOKEN tok)
   {
     printf("Called special");
+
+    /* add new code */
+    int x;
     }
 
 /* Get and convert unsigned numbers of all types. */
