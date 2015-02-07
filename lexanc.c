@@ -32,6 +32,7 @@
 #define NUM_RESERVED_WORDS 29
 #define NUM_OPERATORS 6
 #define NUM_SPECIAL_OPERATORS 13
+#define NUM_DELIMETERS 8
 
 void getWholeString(char * buf, int len, bool worded);
 bool isWhiteSpace(char c);
@@ -114,7 +115,6 @@ TOKEN identifier (TOKEN tok)
         tok->tokentype = RESERVED;
         tok->whichval = i + 1;
         /* TODO Verify that this is an integer type */
-       // tok->datatype = INTEGER;
         return tok;
       }
     }
@@ -124,7 +124,6 @@ TOKEN identifier (TOKEN tok)
       if(strcmp(string, operators[i]) == 0) {
         tok->tokentype = OPERATOR;
         tok->whichval = i + (OR - OPERATOR_BIAS) - 1;
-        //tok->datatype = INTEGER;
         return tok;
       }
     }
@@ -169,30 +168,34 @@ TOKEN getstring (TOKEN tok)
 
 TOKEN special (TOKEN tok)
   {
-<<<<<<< HEAD
-    printf("Called special");
+    const char* specialOps[NUM_SPECIAL_OPERATORS] = {"+","-","*","/",":=","=","<>","<",
+                                      "<=",">=",">","^","."};
 
-    /* add new code */
-    int x;
-=======
+    const char* delimeters[NUM_DELIMETERS] = {",",";",":","(",")","[","]",".."};
+
     char sToken[3];
     getWholeString(sToken,3,false);
 
-    char* specialOps[NUM_SPECIAL_OPERATORS] = {"+","-","*","/",":=","=","<>","<",
-                                      "<=",">=",">","^","."};
-
+    /* Delimeters */
     int i;
+    for(i = 0; i < NUM_DELIMETERS; i++) {
+      if(strcmp(sToken,delimeters[i]) == 0) {
+        tok->tokentype = DELIMITER;
+        tok->whichval = i + 1;
+        return tok;
+      }
+    }
+
+    /* Operators */
     for(i = 0; i < NUM_SPECIAL_OPERATORS; i++) {
       if(strcmp(sToken,specialOps[i]) == 0) {
         tok->tokentype = OPERATOR;
         tok->whichval = i + 1;
-       // tok->datatype = INTEGER;
         return tok;
       }
->>>>>>> 819cacb0e627dc7589255055c8a3960db37f4232
     }
 
-
+    //printf("I'm Helping: No token found\n");
   }
 
 /* Get and convert unsigned numbers of all types. */
@@ -209,10 +212,6 @@ TOKEN number (TOKEN tok)
     tok->tokentype = NUMBERTOK;
     tok->datatype = INTEGER;
     tok->intval = num;
-
-    /* Extending new feature*/ 
-    int stuff;
-    // yeah
     return (tok);
   }
 
@@ -230,13 +229,27 @@ TOKEN number (TOKEN tok)
       }
       /* Non word or number types */
       else {
-        if(cclass != ALPHA && cclass != NUMERIC && c!= EOF && !isWhiteSpace(c))
+        /* Handle cases where two delimiters might be next to each other, basically only add one character 
+           into the string except for the special cases of 2 character tokens, and just pass a string buffer
+           large enough to store 2 characters and a null terminator */
+        if(cclass != ALPHA && cclass != NUMERIC && c!= EOF && !isWhiteSpace(c)) {
           buf[i] = getchar();
+          if(buf[i] == ':' && peekchar() == '=')
+            buf[++i] = getchar();
+          else if(buf[i] == '<' && (peekchar() == '>' || peekchar() == '='))
+            buf[++i] = getchar();
+          else if(buf[i] == '>' && peekchar() == '=')
+            buf[++i] = getchar();
+          else if(buf[i] == '.' && peekchar() == '.')
+            buf[++i] = getchar();
+          i++;
+          break;
+        }
         else break;
       }
     }
     buf[i] = '\0';
-    // printf("i = %d, obtained string: %s\n",i, buf);
+     // printf("i = %d, obtained string: %s\n",i, buf);
   }
 
   bool isWhiteSpace(char c) {

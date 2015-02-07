@@ -5,15 +5,15 @@
 # token.h is assumed to be a local file because on some machines
 # or yacc versions tokenb.h must be used instead (renamed token.h).
 
-# To compile starter file lex1.c --> lex1
-# 
-lex1:   lexandr.o lex1.o scanner.o printtoken.o token.h lexan.h
-	cc -o lex1 -lm lexandr.o lex1.o scanner.o printtoken.o
-
 # To compile your file lexanc.c --> lexanc
 # 
 lexanc:  lexandr.o lexanc.o scanner.o printtoken.o token.h lexan.h
 	cc -o lexanc -lm lexandr.o lexanc.o scanner.o printtoken.o
+
+# To compile starter file lex1.c --> lex1
+# 
+lex1:   lexandr.o lex1.o scanner.o printtoken.o token.h lexan.h
+	cc -o lex1 -lm lexandr.o lex1.o scanner.o printtoken.o
 
 # To compile starter file lex2.l --> lex2
 # 
