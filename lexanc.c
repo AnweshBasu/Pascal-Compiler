@@ -31,8 +31,10 @@
 #define MAX_STRING_LEN 16
 #define NUM_RESERVED_WORDS 29
 #define NUM_OPERATORS 6
+#define NUM_SPECIAL_OPERATORS 13
 
-void getWholeString(char * buf, int len);
+void getWholeString(char * buf, int len, bool worded);
+bool isWhiteSpace(char c);
 
 /* This file will work as given with an input file consisting only
    of integers separated by blanks:
@@ -46,7 +48,7 @@ void skipblanks ()
   {
       int c;
       while ((c = peekchar()) != EOF
-             && (c == ' ' || c == '\n' || c == '\t'))
+             && isWhiteSpace(c))
           getchar();
 
       /* Consume the { } version of comments -- doesn't handles nesting */
@@ -90,7 +92,7 @@ TOKEN identifier (TOKEN tok)
   {
     /* First check for a reserved word */
     char string[MAX_STRING_LEN];
-    getWholeString(string,MAX_STRING_LEN);
+    getWholeString(string,MAX_STRING_LEN,true);
 
     const char* operators[NUM_OPERATORS] = {"and", "or", "not", "div", "mod", "in"};
 
@@ -112,7 +114,7 @@ TOKEN identifier (TOKEN tok)
         tok->tokentype = RESERVED;
         tok->whichval = i + 1;
         /* TODO Verify that this is an integer type */
-        tok->datatype = INTEGER;
+       // tok->datatype = INTEGER;
         return tok;
       }
     }
@@ -122,10 +124,15 @@ TOKEN identifier (TOKEN tok)
       if(strcmp(string, operators[i]) == 0) {
         tok->tokentype = OPERATOR;
         tok->whichval = i + (OR - OPERATOR_BIAS) - 1;
-        tok->datatype = INTEGER;
+        //tok->datatype = INTEGER;
         return tok;
       }
     }
+
+    /* Just a user defined identifier */
+    tok->tokentype = IDENTIFIERTOK;
+    strcpy(tok->stringval,string);
+    tok->datatype = STRINGTYPE;
   }
 
 TOKEN getstring (TOKEN tok)
@@ -158,12 +165,28 @@ TOKEN getstring (TOKEN tok)
     tok->stringval[i] = '\0';
     tok->datatype = STRINGTYPE;
     return tok;
-    }
+  }
 
 TOKEN special (TOKEN tok)
   {
-    printf("Called special");
+    char sToken[3];
+    getWholeString(sToken,3,false);
+
+    char* specialOps[NUM_SPECIAL_OPERATORS] = {"+","-","*","/",":=","=","<>","<",
+                                      "<=",">=",">","^","."};
+
+    int i;
+    for(i = 0; i < NUM_SPECIAL_OPERATORS; i++) {
+      if(strcmp(sToken,specialOps[i]) == 0) {
+        tok->tokentype = OPERATOR;
+        tok->whichval = i + 1;
+       // tok->datatype = INTEGER;
+        return tok;
+      }
     }
+
+
+  }
 
 /* Get and convert unsigned numbers of all types. */
 TOKEN number (TOKEN tok)
@@ -182,21 +205,30 @@ TOKEN number (TOKEN tok)
     return (tok);
   }
 
-  void getWholeString(char * buf, int len) {
+  void getWholeString(char * buf, int len, bool worded) {
     // printf("Len: %d\n", len);
     int i;
     char c, cclass;
     for(i = 0; i < len; i++) {
       c = peekchar();
       cclass = CHARCLASS[c];
-      if(cclass == ALPHA || cclass == NUMERIC) {
-        buf[i] = getchar();
+      if(worded) {
+        if(cclass == ALPHA || cclass == NUMERIC)
+          buf[i] = getchar();
+        else break;
       }
+      /* Non word or number types */
       else {
-        break;
+        if(cclass != ALPHA && cclass != NUMERIC && c!= EOF && !isWhiteSpace(c))
+          buf[i] = getchar();
+        else break;
       }
     }
     buf[i] = '\0';
     // printf("i = %d, obtained string: %s\n",i, buf);
+  }
+
+  bool isWhiteSpace(char c) {
+    return (c == ' ' || c == '\n' || c == '\t');
   }
 
