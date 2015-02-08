@@ -38,6 +38,7 @@ void getWholeString(char * buf, int len, bool worded);
 bool isWhiteSpace(char c);
 int getInt();
 void consumeToBlank();
+void consumeString();
 
 /* This file will work as given with an input file consisting only
    of integers separated by blanks:
@@ -77,10 +78,10 @@ void skipblanks ()
       /* Consumes the (* *) version of comments */
       comment = false;
 
-      if(peekchar() == OPEN1_COMM && peek2char() == STAR_COMM) comment = true;
+      if(peekchar() == OPEN1_COMM && peek2char() == STAR_COMM){ comment = true; getchar(); getchar();}
 
       while((c = peekchar()) != EOF && comment) {
-        getchar();
+        c = getchar();
         if(c == STAR_COMM && peekchar() == CLOSE1_COMM) {
           comment = false;
           if((peekchar() != OPEN1_COMM && peek2char() != STAR_COMM) && peekchar() != OPEN_COMM)
@@ -154,7 +155,7 @@ TOKEN getstring (TOKEN tok)
           getchar();
         }
         else {
-          getchar();
+          //getchar();
           break;
         }
       }
@@ -167,7 +168,7 @@ TOKEN getstring (TOKEN tok)
     tok->tokentype = STRINGTOK;
     tok->stringval[i] = '\0';
     tok->datatype = STRINGTYPE;
-    consumeToBlank();
+    consumeString();
     return tok;
   }
 
@@ -210,7 +211,7 @@ TOKEN number (TOKEN tok)
     int c;
     for(i = 0; i < 16; i++) {
       c = peeknchar(i + 1);
-      if(CHARCLASS[c] != NUMERIC) {
+      if(CHARCLASS[c] != NUMERIC || i == 15) {
         // printf("c is %c\n", c);
         if(c == '.' || c == 'e') {
           break;
@@ -220,6 +221,7 @@ TOKEN number (TOKEN tok)
           tok->tokentype = NUMBERTOK;
           tok->datatype = INTEGER;
           tok->intval = ret;
+          consumeToBlank();
           return tok;
         }
       }
@@ -274,6 +276,7 @@ TOKEN number (TOKEN tok)
                 tok->tokentype = NUMBERTOK;
                 tok->datatype = REAL;
                 tok->realval = wholeNum;
+                consumeToBlank();
                 return tok;
               }
             }
@@ -296,9 +299,8 @@ TOKEN number (TOKEN tok)
           tok->tokentype = NUMBERTOK;
           tok->datatype = REAL;
           tok->realval = wholeNum;
+          consumeToBlank();
           return tok;
-
-          /* ERROR */
         }
       }
       else {
@@ -306,6 +308,9 @@ TOKEN number (TOKEN tok)
       }
       getchar();
     }
+    /*ERROR*/
+    printf("Shoudln't be here\n");
+
   }
 
   void getWholeString(char * buf, int len, bool worded) {
@@ -363,8 +368,23 @@ TOKEN number (TOKEN tok)
   }
 
   void consumeToBlank() {
-    while(!isWhiteSpace(peekchar()) && peekchar() != EOF) {
-      getchar();
+    char c = peekchar();
+    //while(!isWhiteSpace(peekchar()) && peekchar() != EOF && peekchar() != ';') {
+    while(CHARCLASS[peekchar()] == NUMERIC || CHARCLASS[peekchar()] == ALPHA && c != EOF) {
+      c = getchar();
+     // printf("C blank is %c\n", c);
+      //c = peekchar();
+    }
+  }
+
+  void consumeString() {
+    char c = peekchar();
+    if(c == '\'') getchar();
+    //printf("Peek char is %c\n", c);
+    while(c != '\'' && c != EOF) {
+      c = getchar();
+      //printf("C string is %c\n", c);
+      //c = peekchar();
     }
   }
 
