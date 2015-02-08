@@ -36,6 +36,8 @@
 
 void getWholeString(char * buf, int len, bool worded);
 bool isWhiteSpace(char c);
+int getInt();
+void consumeToBlank();
 
 /* This file will work as given with an input file consisting only
    of integers separated by blanks:
@@ -132,6 +134,8 @@ TOKEN identifier (TOKEN tok)
     tok->tokentype = IDENTIFIERTOK;
     strcpy(tok->stringval,string);
     tok->datatype = STRINGTYPE;
+    consumeToBlank();
+    return tok;
   }
 
 TOKEN getstring (TOKEN tok)
@@ -163,6 +167,7 @@ TOKEN getstring (TOKEN tok)
     tok->tokentype = STRINGTOK;
     tok->stringval[i] = '\0';
     tok->datatype = STRINGTYPE;
+    consumeToBlank();
     return tok;
   }
 
@@ -200,19 +205,107 @@ TOKEN special (TOKEN tok)
 
 /* Get and convert unsigned numbers of all types. */
 TOKEN number (TOKEN tok)
-  { long num;
-    int  c, charval;
-    num = 0;
-    while ( (c = peekchar()) != EOF
-            && CHARCLASS[c] == NUMERIC)
-      {   c = getchar();
-          charval = (c - '0');
-          num = num * 10 + charval;
+  { 
+    int i;
+    int c;
+    for(i = 0; i < 16; i++) {
+      c = peeknchar(i + 1);
+      if(CHARCLASS[c] != NUMERIC) {
+        // printf("c is %c\n", c);
+        if(c == '.' || c == 'e') {
+          break;
         }
-    tok->tokentype = NUMBERTOK;
-    tok->datatype = INTEGER;
-    tok->intval = num;
-    return (tok);
+        else {
+          int ret = getInt();
+          tok->tokentype = NUMBERTOK;
+          tok->datatype = INTEGER;
+          tok->intval = ret;
+          return tok;
+        }
+      }
+    }
+
+    /* Floating point */
+    char wholeNumStr[16];
+    char EvalStr[16];
+    double wholeNum;
+    int decPlace = 0;
+    int Eval = 1;
+    int base[16] = {1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000,1000000000,
+                    1000000000,1000000000,1000000000,1000000000,1000000000};
+
+    for(i = 0; i < 16; i++) {
+      c = peekchar();
+      if(CHARCLASS[c] != NUMERIC) {
+        // printf("Found a non numeric: %c\n", c);
+       // c = getchar();
+        if(c == '.') {
+          //printf("found .\n");
+          decPlace = i;
+          i--;
+        }
+        else if(c == 'e') {
+          // printf("found e\n");
+          int j;
+          getchar();
+          for(j = 0; j < 16; j++) {
+            c = peekchar();
+            if(CHARCLASS[c] != NUMERIC) {
+              if(c == '+' || c == '-') {
+                EvalStr[j] = getchar();
+              }
+              else {
+                // printf("DONE\n");
+                /* return the final value here */
+                wholeNumStr[i] = '\0';
+                EvalStr[j] = '\0';
+                wholeNum = atoi(wholeNumStr);
+                Eval = atoi(EvalStr);
+                decPlace = decPlace - strlen(wholeNumStr);
+                // printf("Decimal Place: %d\n", decPlace);
+                Eval = Eval + decPlace;
+                // printf("Eval: %s\n", EvalStr);
+
+                if(Eval < 0)
+                  wholeNum = (double)wholeNum / (double)base[-Eval];
+                else 
+                  wholeNum = (double)wholeNum * (double)base[Eval];
+
+                tok->tokentype = NUMBERTOK;
+                tok->datatype = REAL;
+                tok->realval = wholeNum;
+                return tok;
+              }
+            }
+
+            else {
+              EvalStr[j] = getchar();
+            }
+          }
+        }
+        else {
+          // No e
+          wholeNumStr[i] = '\0';
+          // printf("Dec place = %d\nWhole String = %s\ni = %d\n", decPlace, wholeNumStr,i);
+          decPlace = decPlace - strlen(wholeNumStr);
+          if(decPlace < 0)
+            wholeNum = (double)atoi(wholeNumStr) / (double)base[-decPlace];
+          else
+            wholeNum = (double)atoi(wholeNumStr) * (double)base[decPlace];
+
+          tok->tokentype = NUMBERTOK;
+          tok->datatype = REAL;
+          tok->realval = wholeNum;
+          return tok;
+
+          /* ERROR */
+        }
+      }
+      else {
+        wholeNumStr[i] = c;
+      }
+      getchar();
+    }
   }
 
   void getWholeString(char * buf, int len, bool worded) {
@@ -255,4 +348,24 @@ TOKEN number (TOKEN tok)
   bool isWhiteSpace(char c) {
     return (c == ' ' || c == '\n' || c == '\t');
   }
+
+  int getInt() {
+    long num;
+    int  c, charval;
+    num = 0;
+    while ( (c = peekchar()) != EOF && CHARCLASS[c] == NUMERIC) {   
+      c = getchar();
+      charval = (c - '0');
+      num = num * 10 + charval;
+    }
+
+    return num;
+  }
+
+  void consumeToBlank() {
+    while(!isWhiteSpace(peekchar()) && peekchar() != EOF) {
+      getchar();
+    }
+  }
+
 

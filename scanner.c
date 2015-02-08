@@ -57,6 +57,21 @@ int peek2char()         /* Peek at second character without moving pointer */
     return cc;
     }
 
+int peeknchar(int n) {
+  int c;
+  int cs[32];
+  int i;
+  for(i = 0; i < n; i++) {
+    c = getchar();
+    cs[i] = c;
+  }
+
+  for(i = n - 1; i >= 0; i--) {
+    ungetc(cs[i],stdin);
+  }
+  return c;
+}
+
 void init_charclass()   /* initialize character class array */
   { int i;
     for (i = 0; i < MAXCHARCLASS; ++i) CHARCLASS[i] = 0;

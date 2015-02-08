@@ -30,6 +30,7 @@
 TOKEN talloc();
 int peekchar();
 int peek2char();
+int peeknchar();
 void init_charclass();
 TOKEN gettoken();
 void printtoken(TOKEN tok);
