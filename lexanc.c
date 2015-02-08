@@ -28,7 +28,7 @@
 #include "token.h"
 #include "lexan.h"
 
-#define MAX_STRING_LEN 16
+#define MAX_STRING_LEN 15
 #define NUM_RESERVED_WORDS 29
 #define NUM_OPERATORS 6
 #define NUM_SPECIAL_OPERATORS 13
@@ -213,7 +213,8 @@ TOKEN number (TOKEN tok)
       c = peeknchar(i + 1);
       if(CHARCLASS[c] != NUMERIC || i == 15) {
         // printf("c is %c\n", c);
-        if(c == '.' || c == 'e') {
+        if((c == '.' || c == 'e') && (c = (peeknchar(i + 2))) != '.') {
+          // printf("Char is %c\n",c);
           break;
         }
         else {
@@ -228,15 +229,22 @@ TOKEN number (TOKEN tok)
     }
 
     /* Floating point */
-    char wholeNumStr[16];
-    char EvalStr[16];
+    char wholeNumStr[160];
+    char EvalStr[160];
     double wholeNum;
-    int decPlace = 0;
+    int decPlace = 1;
     int Eval = 1;
-    int base[16] = {1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000,1000000000,
-                    1000000000,1000000000,1000000000,1000000000,1000000000};
+    const int maxLen = 9;
+    int numDigits;
+    double base[39];//{1,10,100,1000,10000,100000,1000000,10000000};
+    base[0] = 1;
 
-    for(i = 0; i < 16; i++) {
+    int k;
+    for(k = 1; k < 39; k++) {
+      base[k] = base[k - 1] * 10;
+    }
+
+    for(i = 0; (i < 160); i++) {
       c = peekchar();
       if(CHARCLASS[c] != NUMERIC) {
         // printf("Found a non numeric: %c\n", c);
@@ -250,7 +258,7 @@ TOKEN number (TOKEN tok)
           // printf("found e\n");
           int j;
           getchar();
-          for(j = 0; j < 16; j++) {
+          for(j = 0; j < 160; j++) {
             c = peekchar();
             if(CHARCLASS[c] != NUMERIC) {
               if(c == '+' || c == '-') {
@@ -263,10 +271,15 @@ TOKEN number (TOKEN tok)
                 EvalStr[j] = '\0';
                 wholeNum = atoi(wholeNumStr);
                 Eval = atoi(EvalStr);
-                decPlace = decPlace - strlen(wholeNumStr);
+                numDigits = strlen(wholeNumStr) > maxLen ? maxLen : strlen(wholeNumStr); 
+                decPlace = decPlace - numDigits;
+                // printf("LEngth: %d\n", strlen(wholeNumStr));
                 // printf("Decimal Place: %d\n", decPlace);
                 Eval = Eval + decPlace;
+                // printf("Eval is %d\n",Eval);
                 // printf("Eval: %s\n", EvalStr);
+
+                // if(Eval > 7) Eval = 7;
 
                 if(Eval < 0)
                   wholeNum = (double)wholeNum / (double)base[-Eval];
@@ -289,8 +302,14 @@ TOKEN number (TOKEN tok)
         else {
           // No e
           wholeNumStr[i] = '\0';
+          wholeNumStr[9] = '\0';
           // printf("Dec place = %d\nWhole String = %s\ni = %d\n", decPlace, wholeNumStr,i);
-          decPlace = decPlace - strlen(wholeNumStr);
+          numDigits = strlen(wholeNumStr) > maxLen ? maxLen : strlen(wholeNumStr); 
+
+          decPlace = decPlace - numDigits;
+
+          // if(decPlace > 7) decPlace = 7;
+
           if(decPlace < 0)
             wholeNum = (double)atoi(wholeNumStr) / (double)base[-decPlace];
           else
