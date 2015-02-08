@@ -146,7 +146,7 @@ TOKEN getstring (TOKEN tok)
 
     int i;
     char c;
-    for(i = 0; i < 16; i++) {
+    for(i = 0; i < 15; i++) {
       c = peekchar();
       if(c == EOF) break;
       else if(c == '\'') {
