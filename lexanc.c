@@ -212,8 +212,13 @@ TOKEN special (TOKEN tok)
 TOKEN number (TOKEN tok)
   { 
     int i;
-    int c;
-    for(i = 0; i < 16; i++) {
+    int c = peekchar();
+
+    // /* Check for integer */
+    // while(CHARCLASS[(c = pesekchar())] == NUMERIC) {
+
+    // }
+    for(i = 0; i < 32; i++) {
       c = peeknchar(i + 1);
       if(CHARCLASS[c] != NUMERIC) {
         if((c == '.' || c == 'e') && (c = (peeknchar(i + 2))) != '.') {
@@ -308,12 +313,27 @@ TOKEN number (TOKEN tok)
 
   int getInt() {
     long num;
+    long lastnum;
     int  c, charval;
+    bool overflow = false;
+    bool sign = false;
     num = 0;
     while ( (c = peekchar()) != EOF && CHARCLASS[c] == NUMERIC) {   
       c = getchar();
       charval = (c - '0');
+      if(num >= 0) sign = false;
+      else sign = true;
+
+      lastnum = num;
+
       num = num * 10 + charval;
+
+      /* Sign flipped */
+      if((num < 0 && !sign) || (num >= 0 && sign)) {
+        printf("Integer number out of range\n");
+        return lastnum;
+      }
+
     }
 
     return num;
