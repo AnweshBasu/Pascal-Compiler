@@ -27,18 +27,24 @@
 #include <stdbool.h>
 #include "token.h"
 #include "lexan.h"
+#include <stdlib.h>
 
 #define MAX_STRING_LEN 15
 #define NUM_RESERVED_WORDS 29
 #define NUM_OPERATORS 6
 #define NUM_SPECIAL_OPERATORS 13
 #define NUM_DELIMETERS 8
+#define MAX_NUM_SIZE 300
+#define MAX_DIGITS 8
 
 void getWholeString(char * buf, int len, bool worded);
 bool isWhiteSpace(char c);
 int getInt();
 void consumeToBlank();
 void consumeString();
+bool isEndNum(int c);
+void buildNumber(char * numArr, int * trailDigs, int * leadingDigs);
+void buildExponent(char * expArr);
 
 /* This file will work as given with an input file consisting only
    of integers separated by blanks:
@@ -200,8 +206,6 @@ TOKEN special (TOKEN tok)
         return tok;
       }
     }
-
-    //printf("I'm Helping: No token found\n");
   }
 
 /* Get and convert unsigned numbers of all types. */
@@ -211,10 +215,8 @@ TOKEN number (TOKEN tok)
     int c;
     for(i = 0; i < 16; i++) {
       c = peeknchar(i + 1);
-      if(CHARCLASS[c] != NUMERIC || i == 15) {
-        // printf("c is %c\n", c);
+      if(CHARCLASS[c] != NUMERIC) {
         if((c == '.' || c == 'e') && (c = (peeknchar(i + 2))) != '.') {
-          // printf("Char is %c\n",c);
           break;
         }
         else {
@@ -228,15 +230,7 @@ TOKEN number (TOKEN tok)
       }
     }
 
-    /* Floating point */
-    char wholeNumStr[160];
-    char EvalStr[160];
-    double wholeNum;
-    int decPlace = 1;
-    int Eval = 1;
-    const int maxLen = 9;
-    int numDigits;
-    double base[39];//{1,10,100,1000,10000,100000,1000000,10000000};
+    double base[39];
     base[0] = 1;
 
     int k;
@@ -244,92 +238,32 @@ TOKEN number (TOKEN tok)
       base[k] = base[k - 1] * 10;
     }
 
-    for(i = 0; (i < 160); i++) {
-      c = peekchar();
-      if(CHARCLASS[c] != NUMERIC) {
-        // printf("Found a non numeric: %c\n", c);
-       // c = getchar();
-        if(c == '.') {
-          //printf("found .\n");
-          decPlace = i;
-          i--;
-        }
-        else if(c == 'e') {
-          // printf("found e\n");
-          int j;
-          getchar();
-          for(j = 0; j < 160; j++) {
-            c = peekchar();
-            if(CHARCLASS[c] != NUMERIC) {
-              if(c == '+' || c == '-') {
-                EvalStr[j] = getchar();
-              }
-              else {
-                // printf("DONE\n");
-                /* return the final value here */
-                wholeNumStr[i] = '\0';
-                EvalStr[j] = '\0';
-                wholeNum = atoi(wholeNumStr);
-                Eval = atoi(EvalStr);
-                numDigits = strlen(wholeNumStr) > maxLen ? maxLen : strlen(wholeNumStr); 
-                decPlace = decPlace - numDigits;
-                // printf("LEngth: %d\n", strlen(wholeNumStr));
-                // printf("Decimal Place: %d\n", decPlace);
-                Eval = Eval + decPlace;
-                // printf("Eval is %d\n",Eval);
-                // printf("Eval: %s\n", EvalStr);
+    char numArr[MAX_NUM_SIZE];
+    char expArr[MAX_NUM_SIZE];
+    int trailDigs = 0;
+    int leadingDigs = 0;
+    int exponent = 0;
+    double finalNumber;
 
-                // if(Eval > 7) Eval = 7;
-
-                if(Eval < 0)
-                  wholeNum = (double)wholeNum / (double)base[-Eval];
-                else 
-                  wholeNum = (double)wholeNum * (double)base[Eval];
-
-                tok->tokentype = NUMBERTOK;
-                tok->datatype = REAL;
-                tok->realval = wholeNum;
-                consumeToBlank();
-                return tok;
-              }
-            }
-
-            else {
-              EvalStr[j] = getchar();
-            }
-          }
-        }
-        else {
-          // No e
-          wholeNumStr[i] = '\0';
-          wholeNumStr[9] = '\0';
-          // printf("Dec place = %d\nWhole String = %s\ni = %d\n", decPlace, wholeNumStr,i);
-          numDigits = strlen(wholeNumStr) > maxLen ? maxLen : strlen(wholeNumStr); 
-
-          decPlace = decPlace - numDigits;
-
-          // if(decPlace > 7) decPlace = 7;
-
-          if(decPlace < 0)
-            wholeNum = (double)atoi(wholeNumStr) / (double)base[-decPlace];
-          else
-            wholeNum = (double)atoi(wholeNumStr) * (double)base[decPlace];
-
-          tok->tokentype = NUMBERTOK;
-          tok->datatype = REAL;
-          tok->realval = wholeNum;
-          consumeToBlank();
-          return tok;
-        }
-      }
-      else {
-        wholeNumStr[i] = c;
-      }
-      getchar();
+    buildNumber(numArr, &trailDigs, &leadingDigs);
+    finalNumber = atof(numArr);
+    // printf("Number is %s with %d trailing digits\nleading digits %d\n", numArr, trailDigs,leadingDigs);
+    if(peekchar() == 'e') {
+      buildExponent(expArr);
+      exponent = atoi(expArr) - trailDigs + leadingDigs;
     }
-    /*ERROR*/
-    printf("Shoudln't be here\n");
+    else exponent = exponent - trailDigs + leadingDigs;
 
+    // printf("Exponent is %d\n",exponent);
+
+    /* Check if the exponent is negative or not */
+    if(exponent < 0) finalNumber /= base[-exponent];
+    else             finalNumber *= base[exponent];
+
+    tok->tokentype = NUMBERTOK;
+    tok->datatype = REAL;
+    tok->realval = finalNumber;
+    return tok;
   }
 
   void getWholeString(char * buf, int len, bool worded) {
@@ -366,7 +300,6 @@ TOKEN number (TOKEN tok)
       }
     }
     buf[i] = '\0';
-     // printf("i = %d, obtained string: %s\n",i, buf);
   }
 
   bool isWhiteSpace(char c) {
@@ -388,23 +321,75 @@ TOKEN number (TOKEN tok)
 
   void consumeToBlank() {
     char c = peekchar();
-    //while(!isWhiteSpace(peekchar()) && peekchar() != EOF && peekchar() != ';') {
     while(CHARCLASS[peekchar()] == NUMERIC || CHARCLASS[peekchar()] == ALPHA && c != EOF) {
       c = getchar();
-     // printf("C blank is %c\n", c);
-      //c = peekchar();
     }
   }
 
   void consumeString() {
     char c = peekchar();
     if(c == '\'') getchar();
-    //printf("Peek char is %c\n", c);
     while(c != '\'' && c != EOF) {
       c = getchar();
-      //printf("C string is %c\n", c);
-      //c = peekchar();
     }
+  }
+
+  bool isEndNum(int c) {
+    return isWhiteSpace(c) || c == 'e' || (CHARCLASS[c] != NUMERIC && c != '.');
+  }
+
+  void buildNumber(char * numArr, int * trailDigs, int * leadingDigs) {
+    char c;
+    bool sigFig = false;
+    bool foundDot = false;
+    bool foundDotOnce = false;
+    int index = 0;
+    int numDigs = 0;
+
+    while(!isEndNum((c = peekchar()))) {
+      c = getchar();
+      /* Add the first 8 significant figures to the number */
+      if(c != '0' && c != '.') sigFig = true;
+
+      if(c == '.') foundDotOnce = true;
+
+      /* Count the number of digits after the decimal point */
+      if(foundDot && numDigs < MAX_DIGITS) (*trailDigs)++;
+      if(c == '.' && !sigFig) foundDot = true;
+      if(sigFig) {
+        /* Add the . to the number but don't incement the numDigs */
+        if(c != '.') numDigs++;
+        if(numDigs <= MAX_DIGITS) {
+          numArr[index] = c;
+          index++;
+        }
+
+        /* We only have MAX DIG numbers so we need to dvide out the potential numbers after
+           out truncation by subtracting leadingDigs from the exponent */
+        else {
+          if(!foundDotOnce) {
+            (*leadingDigs)++;
+            foundDotOnce = false;
+          }
+        }
+      }
+    }
+    /* Null terminate the number array */
+    numArr[index] = '\0';
+  }
+
+  void buildExponent(char * expArr) {
+    char c;
+    int index = 0;
+
+    /* Eat the e we are gaurunteed to haves coming in */
+    getchar();
+    while(!isWhiteSpace((c = peekchar()))) {
+      expArr[index] = getchar();
+      index++;
+    }
+    /* Null terminate */
+    expArr[index] = '\0';
   }
 
 
