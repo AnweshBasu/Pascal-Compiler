@@ -36,6 +36,7 @@
 #define NUM_DELIMETERS 8
 #define MAX_NUM_SIZE 300
 #define MAX_DIGITS 8
+#define MAX_INT 2147483647
 
 void getWholeString(char * buf, int len, bool worded);
 bool isWhiteSpace(char c);
@@ -212,13 +213,14 @@ TOKEN special (TOKEN tok)
 TOKEN number (TOKEN tok)
   { 
     int i;
-    int c = peekchar();
+    int c;
 
-    // /* Check for integer */
-    // while(CHARCLASS[(c = pesekchar())] == NUMERIC) {
+    /* Check for integer */
+    // while(CHARCLASS[(c = peekchar())] == NUMERIC) {
 
-    // }
-    for(i = 0; i < 32; i++) {
+
+  //  }
+    for(i = 0; i < MAX_NUM_SIZE; i++) {
       c = peeknchar(i + 1);
       if(CHARCLASS[c] != NUMERIC) {
         if((c == '.' || c == 'e') && (c = (peeknchar(i + 2))) != '.') {
@@ -312,31 +314,32 @@ TOKEN number (TOKEN tok)
   }
 
   int getInt() {
-    long num;
-    long lastnum;
-    int  c, charval;
-    bool overflow = false;
-    bool sign = false;
-    num = 0;
-    while ( (c = peekchar()) != EOF && CHARCLASS[c] == NUMERIC) {   
+    char numArr[MAX_NUM_SIZE];
+    int index = 0;
+    char c = peekchar();
+    bool sigFig = false;
+
+    while(CHARCLASS[c = peekchar()] == NUMERIC) {
       c = getchar();
-      charval = (c - '0');
-      if(num >= 0) sign = false;
-      else sign = true;
-
-      lastnum = num;
-
-      num = num * 10 + charval;
-
-      /* Sign flipped */
-      if((num < 0 && !sign) || (num >= 0 && sign)) {
-        printf("Integer number out of range\n");
-        return lastnum;
+      if(c != '0') sigFig = true;
+      if(sigFig) {
+        numArr[index] = c;
+        index++;
       }
-
+    }
+    long long l;
+    l = atoll(numArr);
+    bool overflow = false;
+    if(index > 10 || (l = atoll(numArr)) > MAX_INT) {
+      printf("Integer number out of range\n");
+      /* Concatenate the overflow number */
+      overflow = true;
+      index = 10;
     }
 
-    return num;
+    numArr[index] = '\0';
+    if(overflow) numArr[index - 1] = '\0';
+    return atoi(numArr);
   }
 
   void consumeToBlank() {

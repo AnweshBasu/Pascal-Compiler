@@ -59,7 +59,7 @@ int peek2char()         /* Peek at second character without moving pointer */
 
 int peeknchar(int n) {
   int c;
-  int cs[32];
+  int cs[999];
   int i;
   for(i = 0; i < n; i++) {
     c = getchar();
