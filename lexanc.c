@@ -37,6 +37,8 @@
 #define MAX_NUM_SIZE 300
 #define MAX_DIGITS 8
 #define MAX_INT 2147483647
+#define MAX_FLOAT 3.402823E+38
+#define MIN_FLOAT 1.175495E-38 
 
 void getWholeString(char * buf, int len, bool worded);
 bool isWhiteSpace(char c);
@@ -266,6 +268,16 @@ TOKEN number (TOKEN tok)
     /* Check if the exponent is negative or not */
     if(exponent < 0) finalNumber /= base[-exponent];
     else             finalNumber *= base[exponent];
+
+    /* Check for floating point overflow */
+    if(finalNumber > MAX_FLOAT || finalNumber < MIN_FLOAT ||
+       exponent > 39 || exponent < -39) {
+      printf("Floating number out of range\n");
+      tok->tokentype = NUMBERTOK;
+      tok->datatype = REAL;
+      tok->realval = 0.0;
+      return tok;
+    }
 
     tok->tokentype = NUMBERTOK;
     tok->datatype = REAL;
