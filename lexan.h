@@ -18,6 +18,7 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. */
+#include <stdbool.h>
 
 #define MAXCHARCLASS 256
 
@@ -26,6 +27,19 @@
 #define SPECIAL 3
 
 #define DEBUGGETTOKEN 0
+
+#define MAX_STRING_LEN 15
+#define NUM_RESERVED_WORDS 29
+#define NUM_OPERATORS 6
+#define NUM_SPECIAL_OPERATORS 13
+#define NUM_DELIMETERS 8
+#define MAX_NUM_SIZE 300
+#define MAX_DIGITS 8
+#define MAX_INT 2147483647
+#define MAX_FLOAT 3.402823E+38
+#define MIN_FLOAT 1.175495E-38 
+#define POS true
+#define NEG false
 
 TOKEN talloc();
 int peekchar();
@@ -43,3 +57,14 @@ TOKEN identifier (TOKEN tok);
 TOKEN getstring (TOKEN tok);
 TOKEN special (TOKEN tok);
 TOKEN number (TOKEN tok);
+
+void getWholeString(char * buf, int len, bool worded);
+bool isWhiteSpace(char c);
+int getInt();
+void consumeToBlank();
+void consumeString();
+bool isEndNum(int c);
+void buildNumber(char * numArr, int * trailDigs, int * leadingDigs);
+void buildExponent(char * expArr);
+double toDouble(char * str);
+int toInt(char * str, bool print);

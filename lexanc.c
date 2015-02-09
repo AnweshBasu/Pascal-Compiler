@@ -24,30 +24,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include <stdbool.h>
 #include "token.h"
 #include "lexan.h"
-#include <stdlib.h>
-
-#define MAX_STRING_LEN 15
-#define NUM_RESERVED_WORDS 29
-#define NUM_OPERATORS 6
-#define NUM_SPECIAL_OPERATORS 13
-#define NUM_DELIMETERS 8
-#define MAX_NUM_SIZE 300
-#define MAX_DIGITS 8
-#define MAX_INT 2147483647
-#define MAX_FLOAT 3.402823E+38
-#define MIN_FLOAT 1.175495E-38 
-
-void getWholeString(char * buf, int len, bool worded);
-bool isWhiteSpace(char c);
-int getInt();
-void consumeToBlank();
-void consumeString();
-bool isEndNum(int c);
-void buildNumber(char * numArr, int * trailDigs, int * leadingDigs);
-void buildExponent(char * expArr);
 
 /* This file will work as given with an input file consisting only
    of integers separated by blanks:
@@ -218,10 +196,6 @@ TOKEN number (TOKEN tok)
     int c;
 
     /* Check for integer */
-    // while(CHARCLASS[(c = peekchar())] == NUMERIC) {
-
-
-  //  }
     for(i = 0; i < MAX_NUM_SIZE; i++) {
       c = peeknchar(i + 1);
       if(CHARCLASS[c] != NUMERIC) {
@@ -255,28 +229,28 @@ TOKEN number (TOKEN tok)
     double finalNumber;
 
     buildNumber(numArr, &trailDigs, &leadingDigs);
-    finalNumber = atof(numArr);
-    // printf("Number is %s with %d trailing digits\nleading digits %d\n", numArr, trailDigs,leadingDigs);
+
+    finalNumber = toDouble(numArr);
     if(peekchar() == 'e') {
       buildExponent(expArr);
-      exponent = atoi(expArr) - trailDigs + leadingDigs;
+      exponent = toInt(expArr,false) - trailDigs + leadingDigs;
     }
     else exponent = exponent - trailDigs + leadingDigs;
 
-    // printf("Exponent is %d\n",exponent);
+    if(exponent > 39 || exponent < -39) goto overflow;
 
     /* Check if the exponent is negative or not */
     if(exponent < 0) finalNumber /= base[-exponent];
     else             finalNumber *= base[exponent];
 
     /* Check for floating point overflow */
-    if(finalNumber > MAX_FLOAT || finalNumber < MIN_FLOAT ||
-       exponent > 39 || exponent < -39) {
-      printf("Floating number out of range\n");
-      tok->tokentype = NUMBERTOK;
-      tok->datatype = REAL;
-      tok->realval = 0.0;
-      return tok;
+    if(finalNumber > MAX_FLOAT || finalNumber < MIN_FLOAT) {
+      overflow:
+        printf("Floating number out of range\n");
+        tok->tokentype = NUMBERTOK;
+        tok->datatype = REAL;
+        tok->realval = 0.0;
+        return tok;
     }
 
     tok->tokentype = NUMBERTOK;
@@ -286,7 +260,6 @@ TOKEN number (TOKEN tok)
   }
 
   void getWholeString(char * buf, int len, bool worded) {
-    // printf("Len: %d\n", len);
     int i;
     char c, cclass;
     for(i = 0; i < len; i++) {
@@ -326,10 +299,11 @@ TOKEN number (TOKEN tok)
   }
 
   int getInt() {
-    char numArr[MAX_NUM_SIZE];
+    char numArr[MAX_NUM_SIZE] = {};
     int index = 0;
     char c = peekchar();
     bool sigFig = false;
+    int intNum = 0;
 
     while(CHARCLASS[c = peekchar()] == NUMERIC) {
       c = getchar();
@@ -339,19 +313,10 @@ TOKEN number (TOKEN tok)
         index++;
       }
     }
-    long long l;
-    l = atoll(numArr);
-    bool overflow = false;
-    if(index > 10 || (l = atoll(numArr)) > MAX_INT) {
-      printf("Integer number out of range\n");
-      /* Concatenate the overflow number */
-      overflow = true;
-      index = 10;
-    }
 
+    intNum = toInt(numArr,true);
     numArr[index] = '\0';
-    if(overflow) numArr[index - 1] = '\0';
-    return atoi(numArr);
+    return intNum;
   }
 
   void consumeToBlank() {
@@ -425,6 +390,51 @@ TOKEN number (TOKEN tok)
     }
     /* Null terminate */
     expArr[index] = '\0';
+  }
+
+  double toDouble(char * str) {
+    double num = 0;
+    int j,i = 0;
+    int index = 0;
+    int decimals = 0;
+    bool foundDot = false;
+
+    for(i = 0; i < strlen(str); i++) {
+      if(foundDot) decimals++;
+      if(str[i] == '.') {
+        /* Skip decimal */
+        foundDot = true;
+      }
+      else {
+       num = num * 10.0 + (str[i] - '0');
+      }
+    }
+
+    for(i = 0; i < decimals; i++) num /= 10.0;
+    return num;
+  }
+
+  int toInt(char * str, bool print) {
+    int num = 0;
+    long long overflow = 0;
+    int i;
+    bool sign = (str[0] == '-' ? NEG : POS);
+
+    for(i = 0; i < strlen(str); i++) {
+      if( (str[i] - '0') >= 0 && (str[i] - '0') <= 9) {
+        overflow = (long long)num * 10 + (str[i] - '0');
+        /* Check overflow and underflow */
+        if(overflow > MAX_INT || overflow < -MAX_INT){
+          if(print)
+            printf("Integer number out of range\n"); 
+          break;
+       }
+        num = num * 10 + (str[i] - '0');
+      }
+    }
+
+    if(sign == NEG) return -num;
+    return num;
   }
 
 
