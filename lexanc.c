@@ -1,3 +1,6 @@
+/* DAVID PARKER */
+/* dp24559      */
+
 /* lex1.c         14 Feb 01; 31 May 12       */
 
 /* This file contains code stubs for the lexical analyzer.
@@ -235,7 +238,7 @@ TOKEN number (TOKEN tok)
     }
     else exponent = exponent - trailDigs + leadingDigs;
 
-    if(exponent > 39 || exponent < -39) goto overflow;
+    if(exponent > 38 || exponent < -38) goto overflow;
 
     /* Check if the exponent is negative or not */
     if(exponent < 0) finalNumber /= base[-exponent];
@@ -349,8 +352,15 @@ TOKEN number (TOKEN tok)
       /* Add the first 8 significant figures to the number */
       if(c != '0' && c != '.') sigFig = true;
 
-      if(c == '.') foundDotOnce = true;
+      /* Handles multiple dots */
+      if(c == '.') {
+        if(foundDotOnce){
+          ungetc(c,stdin);
+          break;
+        }
 
+        foundDotOnce = true;
+      } 
       /* Count the number of digits after the decimal point */
       if(foundDot && numDigs < MAX_DIGITS) (*trailDigs)++;
       if(c == '.' && !sigFig) foundDot = true;
@@ -422,7 +432,7 @@ TOKEN number (TOKEN tok)
       if( (str[i] - '0') >= 0 && (str[i] - '0') <= 9) {
         overflow = (long long)num * 10 + (str[i] - '0');
         /* Check overflow and underflow */
-        if(overflow > MAX_INT || overflow < -MAX_INT){
+        if(overflow > MAX_INT || overflow < MIN_INT){
           if(print)
             printf("Integer number out of range\n"); 
           break;
