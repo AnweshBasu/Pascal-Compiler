@@ -104,7 +104,6 @@ TOKEN identifier (TOKEN tok)
       if(strcmp(string, rWords[i]) == 0) {
         tok->tokentype = RESERVED;
         tok->whichval = i + 1;
-        /* TODO Verify that this is an integer type */
         return tok;
       }
     }
@@ -142,7 +141,6 @@ TOKEN getstring (TOKEN tok)
           getchar();
         }
         else {
-          //getchar();
           break;
         }
       }
