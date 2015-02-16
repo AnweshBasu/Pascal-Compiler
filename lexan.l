@@ -1,7 +1,10 @@
 %{    /* lex2.l -- partial lex specification for Pascal    22 Jul 13 */
 
 /* Copyright (c) 2013 Gordon S. Novak Jr. and The University of Texas at Austin
-   */
+   David Parker
+   dp24559
+   Project 2
+*/
 
 /* This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -63,7 +66,7 @@ id       {letter}({letter}|{digit})*
 fnumber  {digit}+(\.{digit}+)?(e[+\-]?{digit}+)?
 integer  {digit}*
 comment  \{[^\}]*\}|\(\*[(?!\*\))]*\*\)|\(\*[^\*\)]*\*\)
-string   '([^']|'')*'
+string   '([^']|'{2})*'
 
 %%
 
@@ -195,30 +198,21 @@ int install_int() {
   yylval->tokentype = NUMBERTOK;
   yylval->datatype = INTEGER;
   num = toInt(yytext, true);
-  //sscanf(yytext, "%d", &num);
   yylval->intval = num;
   return NUMBER;
 }
 
 int install_string() {
-    // printf("MATCH = %s\n", yytext);
   yylval = (TOKEN) talloc();
   yylval->tokentype = STRINGTOK;
   yylval->datatype = STRING;
   parseString(yytext, yylval->stringval);
-  // strcpy(str,yytext + 1);
-  // /* Make sure our string doesn't have the ending ' or greater than 15 charachters */
-  // str[strlen(str) - 1] = '\0';
-  // str[15] = '\0';
-  // // printf("%s\n", str);
-  // //sscanf(str, "%s", yylval->stringval);
-  // strcpy(yylval->stringval, str);
   return STRING;
-
 }
 
 int yywrap() {return(1);}       /* lex may need this. */
 
+/* Converts a string to an int */
 int toInt(char * str, bool print) {
   int num = 0;
   long long overflow = 0;
@@ -242,6 +236,7 @@ int toInt(char * str, bool print) {
   return num;
 }
 
+/* Regex grabs the entire string, we just want the first 15 characters */
 void parseString(char * s, char * inbuf) {
   char buf[16];
   int index = 0;

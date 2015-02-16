@@ -1,0 +1,34 @@
+Name: David Parker
+EID: dp24559
+
+Project 2
+**********************************************************************************************
+For project 2 we were given a partially completed lex specification,
+some things that weren't working were floating points with e, overflow
+for both ints and floating points, and the rest of the reserved words and
+operators. Comments were also missing
+
+Fixing the floating points to work with a given exponent e, was as simple as
+changing the capital E to a lower case e for the regex to match properly.
+
+I just added a match for each of the reserved words, operators and delimeters
+to finish the incomplete list given by Novak.
+
+Comments were a little bit trickier, the {} type comment regex was given by
+Novak in class but getting the (* *) type to work with all the corner cases
+took some regex magic (lots of research on regex structure), but I finally got
+it to match every case. Basically the regex looks for (* then multiple instances 
+of any string that is not *) until it finds the *) and terminates.
+
+Strings was as easy as just chaning the {} comment regex to ''. One subtlety was
+that I had to check if the inner string was not a ' OR it was a double single quote
+'' then continue matching until it found the last '. I wrote a small function to parse
+the given string beacuse 'hello world' would match yytext to 'hello world' instead of
+hello world. So the function gets rid of the leading and trailing single quotes but also
+changes double single qoutes into a single single qoute. For instance 'don''t' becomes
+don't because the double single quote become just a single quote. The function also truncated
+the string to just 15 characters, but the regex consumes infinitley many
+
+Integers was as easy as just matching any number of digits, then I had a function to check
+for overflow but also truncate down the digits.
+**********************************************************************************************
