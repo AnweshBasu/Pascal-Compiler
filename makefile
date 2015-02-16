@@ -3,7 +3,12 @@
 # Gordon S. Novak Jr.
 #
 # token.h is assumed to be a local file because on some machines
+
 # or yacc versions tokenb.h must be used instead (renamed token.h).
+# To compile your file lexan.l --> lexer
+# 
+lexer:  lex.yy.o lexanl.o printtoken.o token.h lexan.h
+	cc -o lexer lex.yy.o lexanl.o printtoken.o
 
 # To compile your file lexanc.c --> lexanc
 # 
@@ -24,11 +29,6 @@ lexasu:   lexasu.o
 # 
 lex2:   lex2.yy.o lexanl.o printtoken.o token.h lexan.h
 	cc -o lex2 lex2.yy.o lexanl.o printtoken.o
-
-# To compile your file lexan.l --> lexer
-# 
-lexer:  lex.yy.o lexanl.o printtoken.o token.h lexan.h
-	cc -o lexer lex.yy.o lexanl.o printtoken.o
 
 # To compile starter file pars1.c --> pars1c
 #     using your file lexanc.c
