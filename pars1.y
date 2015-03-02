@@ -84,7 +84,7 @@ TOKEN parseresult;
                                        { $$ = makeprogn($1,cons($2, $3)); }
              |  IF expr THEN statement endif   { $$ = makeif($1, $2, $4, $5); }
              |  assignment
-             |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($2,$3,$4,$6,$8);}
+             |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$6,$8);}
              ;
   varid      :  IDENTIFIER {$$ = varid($1);}
              ;
@@ -266,22 +266,41 @@ TOKEN varid(TOKEN id) {
   return getid(id);
 }
 
-TOKEN forloop(TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN to_expression, TOKEN statement) {
-  TOKEN ret = makeprogn(ret, binop(assign, varid, assign_expression));
+TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN to_expression, TOKEN statement) {
+  TOKEN ret = fortok;
+  printf("HEY\n");
+  ret = makeprogn(ret, binop(assign, varid, assign_expression));
+
   TOKEN next = ret->operands;
-  TOKEN iftok, gototok, ifexpr;
+  TOKEN iftok, gototok, ifexpr, varidcopy;
 
   /* Add the goto label */
   next->link = label(labelnumber);
   next = next->link;
 
-  /* Create the expression for the if */
+  // /* Create the if expression */
   // ifexpr = createtok(OPERATOR, LEOP);
-  // ifexpr->operands = varid;
+  // ifexpr->link = statement;
+  // varidcopy = copytok(varid);
+  // ifexpr->operands = varidcopy;
   // (ifexpr->operands)->link = to_expression;
 
+  // /* Link the if to the if expression */
   // iftok = createtok(OPERATOR, IFOP);
-  // next->link = makeif(iftok, ifexpr, statement, NULL);
+  // iftok->operands = ifexpr;
+
+  // /* Link the label to the new if statement */
+  // next->link = iftok;
+
+
+  /* Create the expression for the if */
+  varidcopy = copytok(varid);
+  ifexpr = createtok(OPERATOR, LEOP);
+  ifexpr->operands = varidcopy;
+  (ifexpr->operands)->link = to_expression;
+
+  iftok = createtok(OPERATOR, IFOP);
+  next->link = makeif(iftok, ifexpr, statement, NULL);
 
   return ret;
 }
@@ -326,6 +345,14 @@ TOKEN createtok(int what, int which) {
   return ret;
 }
 
+TOKEN copytok(TOKEN tok) {
+  TOKEN ret = talloc();
+  *ret = *tok;
+  ret->operands = NULL;
+  ret->link = NULL;
+
+  return ret;
+}
 
 
 
