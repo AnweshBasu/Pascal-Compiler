@@ -194,3 +194,16 @@ TOKEN instarray(TOKEN bounds, TOKEN typetok);
 
 /* talloc allocates a new TOKEN record. */
 TOKEN talloc();
+
+
+/* My stuff */
+
+TOKEN program();
+
+TOKEN block();
+
+TOKEN var_decl();
+
+TOKEN type();
+
+void init_sym();

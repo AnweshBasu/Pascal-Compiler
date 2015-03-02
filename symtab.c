@@ -33,7 +33,7 @@
 
                makesym and symalloc will also be used.
 
-	    3. Call searchst(string) to search for a symbol,
+      3. Call searchst(string) to search for a symbol,
                 e.g. searchst(tok->stringval);
                 returns a symbol table pointer, of type SYMBOL.
   */
@@ -111,7 +111,7 @@ SYMBOL searchst(char name[])
           {  sym = searchlev(name, level);
              if (level > 0) level = contblock[level]; /* try containing block */
                 else level = -1;                      /* until all are tried  */
-	   }
+     }
     if (DEBUG) printf("searchst  %8s %ld\n", name, (long) sym);
     return sym;
   }
@@ -131,15 +131,15 @@ int alignsize(SYMBOL sym)
       { case BASICTYPE: case SUBRANGE:
           return sym->size;
           break;
-	case POINTERSYM:
-	  return 8;
+  case POINTERSYM:
+    return 8;
           break;
-	case ARRAYSYM:
-	case RECORDSYM:
-	  return 16;
+  case ARRAYSYM:
+  case RECORDSYM:
+    return 16;
           break;
         default:
-	  return 8;
+    return 8;
           break;
       }
 }
@@ -171,41 +171,41 @@ void pprintsym(SYMBOL sym, int col)   /* print type expression in prefix form */
           printf("%3d ..%4d", sym->lowbound, sym->highbound);
           nextcol = col + 10;
           break;
-	case POINTERSYM:
-	  if (sym->datatype->namestring != 0)
-	    printf("(^ %s)", sym->datatype->namestring);
-	  else printf("(^ %ld)", (long)sym->datatype);
+  case POINTERSYM:
+    if (sym->datatype->namestring != 0)
+      printf("(^ %s)", sym->datatype->namestring);
+    else printf("(^ %ld)", (long)sym->datatype);
           break;
-	case FUNCTIONSYM:
-	case ARRAYSYM:
-	case RECORDSYM:
+  case FUNCTIONSYM:
+  case ARRAYSYM:
+  case RECORDSYM:
           printf ("(%s", symprint[sym->kind]);
           nextcol = col + 2 + symsize[sym->kind];
           if ( sym->kind == ARRAYSYM )
             {  printf(" %3d ..%4d", sym->lowbound, sym->highbound);
                nextcol = nextcol + 11;
-	     }
+       }
           opnds = sym->datatype;
-	  start = 0;
+    start = 0;
           done = 0;
-	  while ( opnds != NULL && done == 0 )
-	    { if (start == 0) 
-		 printf(" ");
-	         else { printf("\n");
-			for (i = 0; i < nextcol; i++) printf(" ");
-		      };
-	      if ( sym->kind == RECORDSYM )
-		 {  printf("(%s ", opnds->namestring);
-		    pprintsym(opnds, nextcol + 2
-			             + strlength(opnds->namestring));
-		    printf(")");
-		 }
-	        else pprintsym(opnds, nextcol);
-	      start = 1;
+    while ( opnds != NULL && done == 0 )
+      { if (start == 0) 
+     printf(" ");
+           else { printf("\n");
+      for (i = 0; i < nextcol; i++) printf(" ");
+          };
+        if ( sym->kind == RECORDSYM )
+     {  printf("(%s ", opnds->namestring);
+        pprintsym(opnds, nextcol + 2
+                   + strlength(opnds->namestring));
+        printf(")");
+     }
+          else pprintsym(opnds, nextcol);
+        start = 1;
               if ( sym->kind == ARRAYSYM ) done = 1;
-	      opnds = opnds->link;
-	    }
-	  printf(")");
+        opnds = opnds->link;
+      }
+    printf(")");
           break;
         default:
           if ( sym->datatype != NULL) pprintsym(sym->datatype, col);
@@ -258,28 +258,28 @@ void printsymbol(SYMBOL sym)
            printf(" %ld  %10s  BASIC  basicdt %3d          siz %5d\n",
                   (long)sym, sym->namestring, sym->basicdt, sym->size);
          break;
-	 case SUBRANGE:
+   case SUBRANGE:
            printf(" %ld  %10s  SUBRA  typ %7d  val %5d .. %5d\n",
-		  (long)sym, sym->namestring, sym->basicdt,
-		  sym->lowbound, sym->highbound);
+      (long)sym, sym->namestring, sym->basicdt,
+      sym->lowbound, sym->highbound);
          break;
          case CONSTSYM:
            switch (sym->basicdt)
-	     {  case INTEGER:
+       {  case INTEGER:
                   printf(" %ld  %10s  CONST  typ INTEGER  val  %ld\n",
                          (long)sym, sym->namestring, sym->constval.intnum);
-		  break;
-	        case REAL:
+      break;
+          case REAL:
                   printf(" %ld  %10s  CONST  typ    REAL  val  %12e\n",
                          (long)sym, sym->namestring, sym->constval.realnum);
-		  break;
-	        case STRINGTYPE:
+      break;
+          case STRINGTYPE:
                   printf(" %ld  %10s  CONST  typ  STRING  val  %12s\n",
                          (long)sym, sym->namestring, sym->constval.stringconst);
-		  break;
-		}
+      break;
+    }
          break;
-	};
+  };
   }
 
 /* Print entries on one level of symbol table */
@@ -287,12 +287,12 @@ void printstlevel(int level)
   { SYMBOL sym;
       sym =  symtab[level];
       if ( sym != NULL )
-	{ printf("Symbol table level %d\n", level);
-	  while ( sym != NULL )
-	    { printsymbol(sym);
-	      sym = sym->link;
-	    };
-	};
+  { printf("Symbol table level %d\n", level);
+    while ( sym != NULL )
+      { printsymbol(sym);
+        sym = sym->link;
+      };
+  };
   }
 
 /* Print all entries in the symbol table */
