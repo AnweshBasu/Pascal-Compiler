@@ -45,14 +45,6 @@ lex2:   lex2.yy.o lexanl.o printtoken.o token.h lexan.h
 pars1c: pars1c.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
 	cc -o pars1c pars1c.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
 
-<<<<<<< HEAD
-=======
-# To compile your file parsc.c --> parsec
-#     using your file lexanc.c
-parsec: parsc.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
-	cc -o parsec parsc.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
-
->>>>>>> fc695a05e821dd3f7f553981a8328de63ae4cfdc
 # To compile your file parse.y --> parser
 #      using your file lexan.l
 parser: y.tab.o lex.yy.o printtoken.o pprint.o symtab.o
