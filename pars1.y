@@ -77,12 +77,28 @@ TOKEN parseresult;
 
 %%
 
-  program    :  statement DOT                  { parseresult = $1; }
+  program    :  PROGRAM IDENTIFIER LPAREN IDENTIFIER RPAREN SEMICOLON block DOT { parseresult = 
+                                                                   program($1, $2, makeprogn($3, $4), $7);}
              ;
   statement  :  BEGINBEGIN statement endpart
                                        { $$ = makeprogn($1,cons($2, $3)); }
              |  IF expr THEN statement endif   { $$ = makeif($1, $2, $4, $5); }
              |  assignment
+             |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($2,$3,$4,$6,$8);}
+             ;
+  varid      :  IDENTIFIER {$$ = varid($1);}
+             ;
+  block      :  var block {$$ = $2;}
+             |  BEGINBEGIN statement endpart {$$ = makeprogn($1,cons($2, $3));}
+             ;
+  var        :  VAR identifiers COLON type SEMICOLON {makevars($2, $4);}
+             ;
+  identifiers:  IDENTIFIER COMMA identifiers {$$ = cons($1, $3);}
+             |  IDENTIFIER {$$ = cons($1, NULL);}
+             ;
+  type       :  simpletype
+             ;
+  simpletype :  IDENTIFIER {$$ = findtype($1);}
              ;
   endpart    :  SEMICOLON statement endpart    { $$ = cons($2, $3); }
              |  END                            { $$ = NULL; }
@@ -118,6 +134,7 @@ TOKEN parseresult;
 #define DB_MAKEIF     4             /* bit to trace makeif */
 #define DB_MAKEPROGN  8             /* bit to trace makeprogn */
 #define DB_PARSERES  16             /* bit to trace parseresult */
+#define EXIT 1
 
  int labelnumber = 0;  /* sequential counter for internal label numbers */
 
@@ -176,6 +193,148 @@ TOKEN makeprogn(TOKEN tok, TOKEN statements)
      return tok;
    }
 
+
+/* My functions */
+TOKEN makevars(TOKEN list, TOKEN type) {
+  SYMBOL symtype = type->symtype;
+  // printf("%d\n\n\n", symtype->basicdt);
+  while(list != NULL) {
+        if(list->tokentype != IDENTIFIERTOK) printf("Identifier expected, var_decl()\n");
+        if(searchlev(list->stringval,blocknumber) == NULL) {
+            SYMBOL newVar = insertsym(list->stringval);
+            newVar->kind = VARSYM;
+            newVar->size = symtype->size;
+            newVar->datatype = symtype;
+            newVar->basicdt = symtype->basicdt;
+            // list->symtype = type->symentry;
+            list = list->link;
+        }
+        else {
+            printf("Attempt to redeclare variable %s\n",list->stringval);
+        }
+    }
+
+    if(EXIT) printf("LEAVING MAKEVARS\n");
+    return type;
+}
+
+TOKEN findtype(TOKEN tok) {
+  if(tok->tokentype != IDENTIFIERTOK) printf("Identifier expected, type()\n");
+  SYMBOL sym = searchst(tok->stringval);
+  if(sym == NULL) printf("Type not found in symbol table, type()\n");
+  tok->symtype = sym;
+
+  if(EXIT) printf("LEAVING FIND TYPE\n");
+  return tok;
+}
+
+TOKEN program(TOKEN program, TOKEN identifiers, TOKEN progn, TOKEN block) {
+  // printf("Program is type %d and val %d\n", program->tokentype, program->whichval);
+
+  /* Smash this token from Reserved word into an Operator */
+  program->tokentype = OPERATOR;
+  program->whichval = PROGRAMOP;
+  /* add the tree links */
+  program->operands = identifiers;
+  identifiers->link = progn;
+  progn->link = block;
+
+  if(EXIT) printf("LEAVING PROGRAM\n");
+  return program;
+}
+
+TOKEN getid(TOKEN tok) {
+  SYMBOL sym;
+  SYMBOL symtype;
+  sym = searchlev(tok->stringval, blocknumber);
+
+  if(sym == NULL) {
+    printf("Variable doesn't exist, getid()\n");
+  }
+  else {
+    tok->symentry = sym;
+    symtype = sym->datatype;
+    if(symtype->kind == BASICTYPE || symtype->kind == POINTERSYM)
+      tok->datatype = symtype->basicdt;
+  }
+
+  return tok;
+}
+
+TOKEN varid(TOKEN id) {
+  /* Check if this variable is in the symbol table */
+  return getid(id);
+}
+
+TOKEN forloop(TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN to_expression, TOKEN statement) {
+  TOKEN ret = makeprogn(ret, binop(assign, varid, assign_expression));
+  TOKEN next = ret->operands;
+  TOKEN iftok, gototok, ifexpr;
+
+  /* Add the goto label */
+  next->link = label(labelnumber);
+  next = next->link;
+
+  /* Create the expression for the if */
+  // ifexpr = createtok(OPERATOR, LEOP);
+  // ifexpr->operands = varid;
+  // (ifexpr->operands)->link = to_expression;
+
+  // iftok = createtok(OPERATOR, IFOP);
+  // next->link = makeif(iftok, ifexpr, statement, NULL);
+
+  return ret;
+}
+
+TOKEN label(int label) {
+  TOKEN ret, labeltok;
+  ret = talloc();
+  ret->tokentype = OPERATOR;
+  ret->whichval = LABELOP;
+  labeltok = constant(label);
+  ret->operands = labeltok;
+
+  return ret;
+}
+
+TOKEN makegoto(int label) {
+  TOKEN gototok;
+  TOKEN ret = talloc();
+  ret->tokentype = OPERATOR;
+  ret->whichval = GOTOOP;
+  gototok = constant(label);
+  ret->operands = gototok;
+  labelnumber++;
+
+  return ret;
+}
+
+TOKEN constant(int number) {
+  TOKEN tok = talloc();
+  tok->tokentype = NUMBERTOK;
+  tok->datatype = INTEGER;
+  tok->intval = number;
+
+  return tok;
+}
+
+TOKEN createtok(int what, int which) {
+  TOKEN ret = talloc();
+  ret->tokentype = what;
+  ret->whichval = which;
+
+  return ret;
+}
+
+
+
+
+
+
+
+
+
+
 int wordaddress(int n, int wordsize)
   { return ((n + wordsize - 1) / wordsize) * wordsize; }
  
@@ -189,7 +348,8 @@ main()
   { int res;
     initsyms();
     res = yyparse();
-    printst();
+
+   printst();
     printf("yyparse result = %8d\n", res);
     if (DEBUG & DB_PARSERES) dbugprinttok(parseresult);
     ppexpr(parseresult);           /* Pretty-print the result tree */

@@ -207,3 +207,14 @@ TOKEN var_decl();
 TOKEN type();
 
 void init_sym();
+
+TOKEN makevars(TOKEN list, TOKEN type);
+TOKEN findtype(TOKEN tok);
+TOKEN program(TOKEN program, TOKEN identifiers, TOKEN progn, TOKEN block);
+TOKEN getid(TOKEN tok);
+TOKEN varid(TOKEN id);
+TOKEN forloop(TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN to_expression, TOKEN statement);
+TOKEN makegoto(int label);
+TOKEN constant(int number);
+TOKEN label(int number);
+TOKEN createtok(int what, int which);

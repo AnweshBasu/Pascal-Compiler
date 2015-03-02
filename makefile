@@ -4,15 +4,15 @@
 #
 # token.h is assumed to be a local file because on some machines
 
-# To compile your file parsc.c --> parsec
-#     using your file lexanc.c
-parsec: parsc.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
-	cc -o parsec parsc.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
-
 # To compile starter file pars1.y --> pars1y
 #      using your file lexan.l
 pars1y: pars1.tab.o lex.yy.o printtoken.o pprint.o symtab.o
 	cc -o pars1y pars1.tab.o lex.yy.o printtoken.o pprint.o symtab.o -ll
+
+# To compile your file parsc.c --> parsec
+#     using your file lexanc.c
+parsec: parsc.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
+	cc -o parsec parsc.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
 
 # or yacc versions tokenb.h must be used instead (renamed token.h).
 # To compile your file lexan.l --> lexer
