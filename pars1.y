@@ -84,7 +84,13 @@ TOKEN parseresult;
                                        { $$ = makeprogn($1,cons($2, $3)); }
              |  IF expr THEN statement endif   { $$ = makeif($1, $2, $4, $5); }
              |  assignment
-             |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$6,$8);}
+             |  function
+             |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$5,$6,$8);}
+             ;
+  function   :  IDENTIFIER LPAREN args RPAREN {$$ = function($1, $2, $3);}
+             ;
+  args       :  expr COMMA expr {$$ = cons($1, $3);}
+             |  expr {$$ = $1;}
              ;
   varid      :  IDENTIFIER {$$ = varid($1);}
              ;
@@ -117,6 +123,7 @@ TOKEN parseresult;
   factor     :  LPAREN expr RPAREN             { $$ = $2; }
              |  IDENTIFIER
              |  NUMBER
+             |  STRING
              ;
 
 %%
@@ -266,32 +273,16 @@ TOKEN varid(TOKEN id) {
   return getid(id);
 }
 
-TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN to_expression, TOKEN statement) {
+TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN smash, TOKEN to_expression, TOKEN statement) {
   TOKEN ret = fortok;
-  printf("HEY\n");
   ret = makeprogn(ret, binop(assign, varid, assign_expression));
 
   TOKEN next = ret->operands;
-  TOKEN iftok, gototok, ifexpr, varidcopy;
+  TOKEN iftok, gototok, ifexpr, varidcopy, inctok, plustok;
 
   /* Add the goto label */
   next->link = label(labelnumber);
   next = next->link;
-
-  // /* Create the if expression */
-  // ifexpr = createtok(OPERATOR, LEOP);
-  // ifexpr->link = statement;
-  // varidcopy = copytok(varid);
-  // ifexpr->operands = varidcopy;
-  // (ifexpr->operands)->link = to_expression;
-
-  // /* Link the if to the if expression */
-  // iftok = createtok(OPERATOR, IFOP);
-  // iftok->operands = ifexpr;
-
-  // /* Link the label to the new if statement */
-  // next->link = iftok;
-
 
   /* Create the expression for the if */
   varidcopy = copytok(varid);
@@ -300,7 +291,36 @@ TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, 
   (ifexpr->operands)->link = to_expression;
 
   iftok = createtok(OPERATOR, IFOP);
+  statement = makeprogn(smash, statement);
   next->link = makeif(iftok, ifexpr, statement, NULL);
+
+  /* Next is on the statement under the progn */
+  next = statement->operands;
+
+  /* increment */
+
+  /* Create the plus operator sub tree */
+  plustok = createtok(OPERATOR, PLUSOP);
+  plustok->operands = copytok(varid);
+  (plustok->operands)->link = constant(1);
+
+  inctok = createtok(OPERATOR, ASSIGNOP);
+  inctok->operands = copytok(varid);
+  (inctok->operands)->link = plustok;
+
+  next->link = inctok;
+
+  /* Add the goto statement */
+  next = next->link;
+  next->link = makegoto(labelnumber);
+
+  return ret;
+}
+
+TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
+  TOKEN ret = createtok(OPERATOR,FUNCALLOP);
+  ret->operands = id;
+  (ret->operands)->link = args;
 
   return ret;
 }
