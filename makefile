@@ -4,6 +4,11 @@
 #
 # token.h is assumed to be a local file because on some machines
 
+# To compile your file parse.y --> parser
+#      using your file lexan.l
+parser: y.tab.o lex.yy.o printtoken.o pprint.o symtab.o
+	cc -o parser y.tab.o lex.yy.o printtoken.o pprint.o symtab.o -ll
+
 # To compile starter file pars1.y --> pars1y
 #      using your file lexan.l
 pars1y: pars1.tab.o lex.yy.o printtoken.o pprint.o symtab.o
@@ -44,11 +49,6 @@ lex2:   lex2.yy.o lexanl.o printtoken.o token.h lexan.h
 #     using your file lexanc.c
 pars1c: pars1c.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
 	cc -o pars1c pars1c.o lexanc.o scanner.o printtoken.o pprint.o symtab.o
-
-# To compile your file parse.y --> parser
-#      using your file lexan.l
-parser: y.tab.o lex.yy.o printtoken.o pprint.o symtab.o
-	cc -o parser y.tab.o lex.yy.o printtoken.o pprint.o symtab.o -ll
 
 # To compile starter file codgen.c --> comp1y
 #      using your files lexan.l and parse.y

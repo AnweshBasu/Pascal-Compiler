@@ -1,5 +1,9 @@
 %{     /* pars1.y    Pascal Parser      Gordon S. Novak Jr.  ; 30 Jul 13   */
 
+/* NAME : David Parker
+   EID  : dp24559
+   Project 3 - Trivb Parser */
+
 /* Copyright (c) 2013 Gordon S. Novak Jr. and
    The University of Texas at Austin. */
 
@@ -89,7 +93,7 @@ TOKEN parseresult;
              ;
   function   :  IDENTIFIER LPAREN args RPAREN {$$ = function($1, $2, $3);}
              ;
-  args       :  expr COMMA expr {$$ = cons($1, $3);}
+  args       :  expr COMMA args {$$ = cons($1, $3);}
              |  expr {$$ = $1;}
              ;
   varid      :  IDENTIFIER {$$ = varid($1);}
@@ -204,7 +208,6 @@ TOKEN makeprogn(TOKEN tok, TOKEN statements)
 /* My functions */
 TOKEN makevars(TOKEN list, TOKEN type) {
   SYMBOL symtype = type->symtype;
-  // printf("%d\n\n\n", symtype->basicdt);
   while(list != NULL) {
         if(list->tokentype != IDENTIFIERTOK) printf("Identifier expected, var_decl()\n");
         if(searchlev(list->stringval,blocknumber) == NULL) {
@@ -213,7 +216,6 @@ TOKEN makevars(TOKEN list, TOKEN type) {
             newVar->size = symtype->size;
             newVar->datatype = symtype;
             newVar->basicdt = symtype->basicdt;
-            // list->symtype = type->symentry;
             list = list->link;
         }
         else {
@@ -236,8 +238,6 @@ TOKEN findtype(TOKEN tok) {
 }
 
 TOKEN program(TOKEN program, TOKEN identifiers, TOKEN progn, TOKEN block) {
-  // printf("Program is type %d and val %d\n", program->tokentype, program->whichval);
-
   /* Smash this token from Reserved word into an Operator */
   program->tokentype = OPERATOR;
   program->whichval = PROGRAMOP;
