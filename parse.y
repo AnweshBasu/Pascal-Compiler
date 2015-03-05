@@ -208,23 +208,10 @@ TOKEN makeprogn(TOKEN tok, TOKEN statements)
 /* My functions */
 TOKEN makevars(TOKEN list, TOKEN type) {
   SYMBOL symtype = type->symtype;
-  while(list != NULL) {
-        if(list->tokentype != IDENTIFIERTOK) printf("Identifier expected, var_decl()\n");
-        if(searchlev(list->stringval,blocknumber) == NULL) {
-            SYMBOL newVar = insertsym(list->stringval);
-            newVar->kind = VARSYM;
-            newVar->size = symtype->size;
-            newVar->datatype = symtype;
-            newVar->basicdt = symtype->basicdt;
-            list = list->link;
-        }
-        else {
-            printf("Attempt to redeclare variable %s\n",list->stringval);
-        }
-    }
+  instvars(list, type);
 
-    if(EXIT) printf("LEAVING MAKEVARS\n");
-    return type;
+  if(EXIT) printf("LEAVING MAKEVARS\n");
+  return type;
 }
 
 TOKEN findtype(TOKEN tok) {
@@ -377,6 +364,28 @@ TOKEN copytok(TOKEN tok) {
 
 int wordaddress(int n, int wordsize)
   { return ((n + wordsize - 1) / wordsize) * wordsize; }
+
+void instvars(TOKEN idlist, TOKEN typetok)
+{  SYMBOL sym, typesym; int align;
+   if (DEBUG)
+      { printf("instvars\n");
+  dbugprinttok(idlist);
+  dbugprinttok(typetok);
+};
+   typesym = typetok->symtype;
+   align = alignsize(typesym);
+   while ( idlist != NULL )   /* for each id */
+     {  sym = insertsym(idlist->stringval);
+        sym->kind = VARSYM;
+        sym->offset = wordaddress(blockoffs[blocknumber], align);
+        sym->size = typesym->size;
+        blockoffs[blocknumber] = sym->offset + sym->size;
+        sym->datatype = typesym;
+        sym->basicdt = typesym->basicdt; /* some student programs use this */
+  idlist = idlist->link;
+};
+    if (DEBUG) printst();
+}
  
 yyerror(s)
   char * s;
