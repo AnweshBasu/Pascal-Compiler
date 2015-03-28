@@ -66,7 +66,7 @@ typedef struct symtbr {
   int    size;
   int    offset;
   union  { char  stringconst[16];
-	   long  intnum;
+	         long  intnum;
            float realnum; } constval;
   int    lowbound;
   int    highbound;

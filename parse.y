@@ -49,6 +49,7 @@
            the IF statement, but Yacc's default resolves it in the right way.*/
 
 #include <stdio.h>
+#include <string.h>
 #include <ctype.h>
 #include "token.h"
 #include "lexan.h"
@@ -98,10 +99,22 @@ TOKEN parseresult;
              ;
   varid      :  IDENTIFIER {$$ = varid($1);}
              ;
-  block      :  var block {$$ = $2;}
+  block      :  VAR varblock block {$$ = $3;}
+             |  CONST constblock block {$$ = $3;}
              |  BEGINBEGIN statement endpart {$$ = makeprogn($1,cons($2, $3));}
              ;
-  var        :  VAR identifiers COLON type SEMICOLON {makevars($2, $4);}
+  constblock :  constlist constblock
+             |  constlist 
+             ;
+  constlist  :  IDENTIFIER EQ constant SEMICOLON {makeconst($1,$3);}
+             ;
+  constant   :  NUMBER { $$ = $1; }
+             |  STRING { $$ = $1; }
+             ;
+  varblock   :  varlist varblock
+             |  varlist
+             ;
+  varlist    :  identifiers COLON type SEMICOLON {makevars($1, $3);}
              ;
   identifiers:  IDENTIFIER COMMA identifiers {$$ = cons($1, $3);}
              |  IDENTIFIER {$$ = cons($1, NULL);}
@@ -212,6 +225,24 @@ TOKEN makevars(TOKEN list, TOKEN type) {
 
   if(EXIT) printf("LEAVING MAKEVARS\n");
   return type;
+}
+
+TOKEN makeconst(TOKEN id, TOKEN value) {
+  SYMBOL sym = insertsym(id->stringval);
+  sym->kind = CONSTSYM;
+  sym->basicdt = value->datatype;
+  sym->size = sizeof(sym->basicdt);
+
+  if(sym->basicdt == INTEGER) {
+    sym->constval.intnum = value->intval;
+  }
+  else if(sym->basicdt == REAL) {
+    sym->constval.realnum = value->realval;
+  }
+  else if(sym->basicdt == STRING) {
+    strcpy(sym->constval.stringconst, value->stringval);
+  }
+  return id;
 }
 
 TOKEN findtype(TOKEN tok) {

@@ -220,3 +220,4 @@ TOKEN function(TOKEN id, TOKEN smash, TOKEN args);
 TOKEN label(int number);
 TOKEN createtok(int what, int which);
 TOKEN copytok(TOKEN tok);
+TOKEN makeconst(TOKEN id, TOKEN value);

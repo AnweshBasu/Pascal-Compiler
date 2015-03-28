@@ -1,2 +1,6 @@
 lexanc
+parser
+pars1.tab.c
+lex.yy.c
+y.tab.c
 *.o
