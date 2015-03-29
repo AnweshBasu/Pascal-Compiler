@@ -49,6 +49,7 @@
            the IF statement, but Yacc's default resolves it in the right way.*/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include "token.h"
@@ -92,7 +93,7 @@ TOKEN parseresult;
              |  function
              |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$5,$6,$8);}
              ;
-  function   :  IDENTIFIER LPAREN args RPAREN {$$ = function($1, $2, $3);}
+  function   :  identifier LPAREN args RPAREN {$$ = function($1, $2, $3);}
              ;
   args       :  expr COMMA args {$$ = cons($1, $3);}
              |  expr {$$ = $1;}
@@ -129,7 +130,7 @@ TOKEN parseresult;
   endif      :  ELSE statement                 { $$ = $2; }
              |  /* empty */                    { $$ = NULL; }
              ;
-  assignment :  IDENTIFIER ASSIGN expr         { $$ = binop($2, $1, $3); }
+  assignment :  identifier ASSIGN expr         { $$ = binop($2, $1, $3); }
              ;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
              |  term 
@@ -138,9 +139,14 @@ TOKEN parseresult;
              |  factor
              ;
   factor     :  LPAREN expr RPAREN             { $$ = $2; }
-             |  IDENTIFIER
+             |  identifier
              |  NUMBER
+             |  MINUS identifier {uminus($1,$2);}
+             |  MINUS NUMBER     {uminus($1,$2);}
              |  STRING
+             |  function 
+             ;
+  identifier : IDENTIFIER {$$ = findidentifier($1); }
              ;
 
 %%
@@ -176,7 +182,55 @@ TOKEN cons(TOKEN item, TOKEN list)           /* add item to front of list */
   }
 
 TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
-  { op->operands = lhs;          /* link operands to operator       */
+  { 
+    if(EXIT) printf("ENTERING binop\n");
+    // lhs = findidentifier(lhs);
+    // rhs = findidentifier(rhs);
+    if(rhs->tokentype == NUMBERTOK) {
+      if(rhs->symentry != NULL)
+        printf("rhs is %s\n", rhs->symentry->namestring);
+    }
+
+    if(lhs->tokentype == OPERATOR) {
+      printf("Yup it's an operator, %d\n", lhs->whichval);
+    } 
+    printf("lhs is %s, rhs is %s, op is %d\n", lhs->stringval, rhs->stringval, op->whichval);
+
+    if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
+      /* Do something */
+      /* Convert the rhs to an int */
+      if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
+        rhs = makeFix(rhs);
+
+      }
+      /* Convert the rhs to a float */
+      else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
+        rhs = makefloat(rhs);
+      }
+    }
+
+    else {
+      /* Cast (fix) rhs to int */
+      if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
+        // printf("CASTING lhs %s\n", lhs->stringval);
+        lhs = makefloat(lhs);
+        op->datatype = REAL;
+      }
+      /* Cast rhs to float */
+      else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
+        // printf("rhs type is %d\n", rhs->datatype);
+        // printf("CASTING rhs %s, (%f)\n", rhs->stringval,rhs->realval);
+        rhs = makefloat(rhs);
+        op->datatype = REAL;
+      }
+    }
+   
+
+    printf("Op is %d\n", op->whichval);
+
+    // op->datatype = REAL;
+
+  op->operands = lhs;          /* link operands to operator       */
     lhs->link = rhs;             /* link second operand to first    */
     rhs->link = NULL;            /* terminate operand list          */
     if (DEBUG & DB_BINOP)
@@ -185,6 +239,7 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
          dbugprinttok(lhs);
          dbugprinttok(rhs);
        };
+       if(EXIT) printf("LEAVING binop\n");
     return op;
   }
 
@@ -204,6 +259,56 @@ TOKEN makeif(TOKEN tok, TOKEN exp, TOKEN thenpart, TOKEN elsepart)
         };
      return tok;
    }
+
+TOKEN findidentifier(TOKEN tok) {
+  if(EXIT) printf("ENTERING findidentifier\n");
+  // printf("Looking up identifier for %s\n", tok->stringval);
+  SYMBOL sym = searchst(tok->stringval);
+  if(sym != NULL) {
+    if(sym->kind == CONSTSYM) {
+      printf("Finding constant with id %s\n", tok->stringval);
+      // TOKEN newConst = talloc();
+      tok->tokentype = NUMBERTOK;
+      tok->datatype = sym->basicdt;
+      tok->symentry = sym;
+      // strcpy(tok->stringval,sym->namestring);
+
+      if(sym->basicdt == INTEGER) {
+        tok->intval = sym->constval.intnum;
+      }
+      else if(sym->basicdt == REAL) {
+        tok->realval = sym->constval.realnum;
+      }
+      // else if(sym->basicdt == STRING) {
+      //   strcpy(sym->constval.stringconst, value->stringval);
+      // }
+      if(EXIT) printf("LEAVING findidentifier\n");
+      return tok;
+    }
+    else if (sym->kind == VARSYM) {
+      printf("Finding variable with id %s\n", tok->stringval);
+      // TOKEN newVar = talloc();
+      // printf("Sym name is %s\n", sym->namestring);
+      // strcpy(newVar->stringval,sym->namestring);
+      tok->tokentype = IDENTIFIERTOK;
+      // printf("Sym type is %d\n", sym->basicdt);
+      tok->datatype = sym->basicdt;
+
+      // if(sym->basicdt == INTEGER) {
+      //   newVar->intval = sym->constval.intnum;
+      // }
+      // else if(sym->basicdt == REAL) {
+      //   newVar->realval = sym->constval.realnum;
+      // }
+       if(EXIT) printf("LEAVING findidentifier\n");
+      return tok;
+    }
+    if(EXIT) printf("LEAVING findidentifier\n");
+    else return tok;
+  }
+  if(EXIT) printf("LEAVING findidentifier\n");
+  else return tok;
+}
 
 TOKEN makeprogn(TOKEN tok, TOKEN statements)
   {  tok->tokentype = OPERATOR;
@@ -242,7 +347,49 @@ TOKEN makeconst(TOKEN id, TOKEN value) {
   else if(sym->basicdt == STRING) {
     strcpy(sym->constval.stringconst, value->stringval);
   }
+
   return id;
+}
+
+TOKEN makefloat(TOKEN tok) {
+  printf("Making float for %s\n\n", tok->stringval);
+  SYMBOL sym = searchst(tok->stringval);
+
+  /* Couldn't find a symobl by it's name, probably a constant */
+  if(sym == NULL && tok->symentry != NULL) {
+    printf("Searching %s\n", tok->symentry->namestring);
+    sym = searchst(tok->symentry->namestring);
+  }
+
+  if(sym == NULL) return tok;
+
+  TOKEN cast = talloc();// maketoken(OPERATOR, FLOATOP);// talloc();
+
+  if(sym->kind == CONSTSYM) {
+    printf("Casting const %s\n", tok->symentry->namestring);
+    cast->tokentype = NUMBERTOK;
+    cast->datatype = REAL;
+    cast->realval = (float)tok->intval;
+  }
+
+  else if(sym->kind == VARSYM) {
+    cast->tokentype = OPERATOR;
+    cast->whichval = FLOATOP;
+    cast->operands = tok;
+  }
+
+  return cast;
+}
+
+TOKEN makeFix(TOKEN tok) {
+  SYMBOL sym = searchst(tok->stringval);
+
+  TOKEN fix = talloc();
+  fix->tokentype = OPERATOR;
+  fix->whichval = FIXOP;
+  fix->operands = tok;
+
+  return fix;
 }
 
 TOKEN findtype(TOKEN tok) {
@@ -279,11 +426,17 @@ TOKEN getid(TOKEN tok) {
   else {
     tok->symentry = sym;
     symtype = sym->datatype;
-    if(symtype->kind == BASICTYPE || symtype->kind == POINTERSYM)
+    // printf("%s\n", );
+    // if(symtype->kind == BASICTYPE || symtype->kind == POINTERSYM)
       tok->datatype = symtype->basicdt;
   }
 
   return tok;
+}
+
+TOKEN uminus(TOKEN minus, TOKEN value) {
+  minus->operands = value;
+  return minus;
 }
 
 TOKEN varid(TOKEN id) {
@@ -292,6 +445,7 @@ TOKEN varid(TOKEN id) {
 }
 
 TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN smash, TOKEN to_expression, TOKEN statement) {
+  if(EXIT) printf("ENTERING forloop\n");
   TOKEN ret = fortok;
   ret = makeprogn(ret, binop(assign, varid, assign_expression));
 
@@ -301,6 +455,7 @@ TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, 
   /* Add the goto label */
   next->link = label(labelnumber);
   next = next->link;
+
 
   /* Create the expression for the if */
   varidcopy = copytok(varid);
@@ -332,15 +487,17 @@ TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, 
   next = next->link;
   next->link = makegoto(labelnumber);
 
+  if(EXIT) printf("LEAVING forloop\n");
+
   return ret;
 }
 
 TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
   TOKEN ret = createtok(OPERATOR,FUNCALLOP);
   id = getid(id);
+  id->link = args;
   ret->operands = id;
-  (ret->operands)->link = args;
-
+  ret->datatype = id->datatype;
   return ret;
 }
 

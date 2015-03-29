@@ -221,3 +221,7 @@ TOKEN label(int number);
 TOKEN createtok(int what, int which);
 TOKEN copytok(TOKEN tok);
 TOKEN makeconst(TOKEN id, TOKEN value);
+TOKEN uminus(TOKEN minus, TOKEN value);
+TOKEN makefloat(TOKEN tok);
+TOKEN findidentifier(TOKEN tok);
+TOKEN makeFix(TOKEN tok);
