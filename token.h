@@ -25,6 +25,7 @@
                                  /* token data structure */
 typedef struct tokn {
   int    tokentype;  /* OPERATOR, DELIMITER, RESERVED, etc */
+  /* Labels use datatype to store the label number */
   int    datatype;   /* INTEGER, REAL, STRINGTYPE, BOOLETYPE, or POINTER */
   struct symtbr * symtype;
   struct symtbr * symentry;

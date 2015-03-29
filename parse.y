@@ -92,8 +92,12 @@ TOKEN parseresult;
              |  assignment
              |  function
              |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$5,$6,$8);}
+             |  REPEAT statements UNTIL expr {$$ = makerepeat($1, $2, $3, $4);}
              ;
-  function   :  identifier LPAREN args RPAREN {$$ = function($1, $2, $3);}
+  statements :  statement SEMICOLON statements {$$ = cons($1,$3);}
+             |  statement
+             ;
+ function    :  identifier LPAREN args RPAREN {$$ = function($1, $2, $3);}
              ;
   args       :  expr COMMA args {$$ = cons($1, $3);}
              |  expr {$$ = $1;}
@@ -133,6 +137,8 @@ TOKEN parseresult;
   assignment :  identifier ASSIGN expr         { $$ = binop($2, $1, $3); }
              ;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
+             |  expr MINUS term                { $$ = binop($2, $1, $3); }
+             |  expr EQ expr                   { $$ = binop($2, $1, $3); }
              |  term 
              ;
   term       :  term TIMES factor              { $$ = binop($2, $1, $3); }
@@ -192,9 +198,9 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
     }
 
     if(lhs->tokentype == OPERATOR) {
-      printf("Yup it's an operator, %d\n", lhs->whichval);
+      // printf("Yup it's an operator, %d\n", lhs->whichval);
     } 
-    printf("lhs is %s, rhs is %s, op is %d\n", lhs->stringval, rhs->stringval, op->whichval);
+    // printf("lhs is %s, rhs is %s, op is %d\n", lhs->stringval, rhs->stringval, op->whichval);
 
     if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
       /* Do something */
@@ -226,7 +232,7 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
     }
    
 
-    printf("Op is %d\n", op->whichval);
+    // printf("Op is %d\n", op->whichval);
 
     // op->datatype = REAL;
 
@@ -266,7 +272,7 @@ TOKEN findidentifier(TOKEN tok) {
   SYMBOL sym = searchst(tok->stringval);
   if(sym != NULL) {
     if(sym->kind == CONSTSYM) {
-      printf("Finding constant with id %s\n", tok->stringval);
+      // printf("Finding constant with id %s\n", tok->stringval);
       // TOKEN newConst = talloc();
       tok->tokentype = NUMBERTOK;
       tok->datatype = sym->basicdt;
@@ -286,7 +292,7 @@ TOKEN findidentifier(TOKEN tok) {
       return tok;
     }
     else if (sym->kind == VARSYM) {
-      printf("Finding variable with id %s\n", tok->stringval);
+      // printf("Finding variable with id %s\n", tok->stringval);
       // TOKEN newVar = talloc();
       // printf("Sym name is %s\n", sym->namestring);
       // strcpy(newVar->stringval,sym->namestring);
@@ -447,13 +453,15 @@ TOKEN varid(TOKEN id) {
 TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN smash, TOKEN to_expression, TOKEN statement) {
   if(EXIT) printf("ENTERING forloop\n");
   TOKEN ret = fortok;
+  TOKEN labeltok;
   ret = makeprogn(ret, binop(assign, varid, assign_expression));
 
   TOKEN next = ret->operands;
   TOKEN iftok, gototok, ifexpr, varidcopy, inctok, plustok;
 
   /* Add the goto label */
-  next->link = label(labelnumber);
+  labeltok = label();
+  next->link = labeltok;
   next = next->link;
 
 
@@ -485,9 +493,36 @@ TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, 
 
   /* Add the goto statement */
   next = next->link;
-  next->link = makegoto(labelnumber);
+  next->link = makegoto(labeltok->datatype);
 
   if(EXIT) printf("LEAVING forloop\n");
+
+  return ret;
+}
+
+TOKEN makerepeat(TOKEN repeat, TOKEN statements, TOKEN until, TOKEN expr) {
+  statements = makeprogn(talloc(),statements);
+  TOKEN ret;
+  TOKEN next, iftok, labeltok;
+  iftok = talloc();
+
+  labeltok = label();
+  ret = makeprogn(repeat, labeltok);
+  next = ret->operands;
+  next->link = statements;
+
+  /* Next is now end of statements */
+  while(next->link != NULL) {
+    next = next->link;
+  }
+
+  next->link = makeif(iftok, expr, until = makeprogn(talloc(),NULL), NULL);
+
+  /* Next is now if */
+  // next = next->link;
+  until->link = makegoto(labeltok->datatype);
+  // ret->operands = makeif(iftok, expr, makeprogn(talloc(),talloc()), NULL);
+  // ret->link = statements;
 
   return ret;
 }
@@ -501,12 +536,14 @@ TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
   return ret;
 }
 
-TOKEN label(int label) {
+TOKEN label() {
   TOKEN ret, labeltok;
   ret = talloc();
   ret->tokentype = OPERATOR;
   ret->whichval = LABELOP;
-  labeltok = constant(label);
+  ret->datatype = labelnumber;
+  // ret->intval = labelnumber;
+  labeltok = constant(labelnumber++);
   ret->operands = labeltok;
 
   return ret;
@@ -519,7 +556,6 @@ TOKEN makegoto(int label) {
   ret->whichval = GOTOOP;
   gototok = constant(label);
   ret->operands = gototok;
-  labelnumber++;
 
   return ret;
 }

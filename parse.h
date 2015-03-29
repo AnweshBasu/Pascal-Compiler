@@ -90,10 +90,6 @@ TOKEN makeprogram(TOKEN name, TOKEN args, TOKEN statements);
    tok and tokb are (now) unused tokens that are recycled. */
 TOKEN makewhile(TOKEN tok, TOKEN expr, TOKEN tokb, TOKEN statement);
 
-/* makerepeat makes structures for a repeat statement.
-   tok and tokb are (now) unused tokens that are recycled. */
-TOKEN makerepeat(TOKEN tok, TOKEN statements, TOKEN tokb, TOKEN expr);
-
 /* makefor makes structures for a for statement.
    sign is 1 for normal loop, -1 for downto.
    asg is an assignment statement, e.g. (:= i 1)
@@ -214,10 +210,9 @@ TOKEN program(TOKEN program, TOKEN identifiers, TOKEN progn, TOKEN block);
 TOKEN getid(TOKEN tok);
 TOKEN varid(TOKEN id);
 TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN smash, TOKEN to_expression, TOKEN statement);
-TOKEN makegoto(int label);
 TOKEN constant(int number);
 TOKEN function(TOKEN id, TOKEN smash, TOKEN args);
-TOKEN label(int number);
+TOKEN label();
 TOKEN createtok(int what, int which);
 TOKEN copytok(TOKEN tok);
 TOKEN makeconst(TOKEN id, TOKEN value);
@@ -225,3 +220,4 @@ TOKEN uminus(TOKEN minus, TOKEN value);
 TOKEN makefloat(TOKEN tok);
 TOKEN findidentifier(TOKEN tok);
 TOKEN makeFix(TOKEN tok);
+TOKEN makerepeat(TOKEN repeat, TOKEN statements, TOKEN until, TOKEN expr);
