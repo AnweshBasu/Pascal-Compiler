@@ -134,7 +134,7 @@ void printexpr(TOKEN tok, int col)     /* print an expression in prefix form */
 		      for (i = 0; i < nextcol; i++) printf(" ");
 		    }
 	    printexpr(opnds, nextcol);
-	    if ( opnds->tokentype == IDENTIFIERTOK && nextcol < 60 )
+	    if ( opnds->tokentype == IDENTIFIERTOK && nextcol < 100 )
 	       nextcol = nextcol + 1 + strlength(opnds->stringval);
 	       else start = 1;
 	    opnds = opnds->link;

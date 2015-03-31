@@ -2,7 +2,7 @@
 
 /* NAME : David Parker
    EID  : dp24559
-   Project 3 - Trivb Parser */
+   Project 3 - Parser */
 
 /* Copyright (c) 2013 Gordon S. Novak Jr. and
    The University of Texas at Austin. */
@@ -190,51 +190,37 @@ TOKEN cons(TOKEN item, TOKEN list)           /* add item to front of list */
 TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
   { 
     if(EXIT) printf("ENTERING binop\n");
-    // lhs = findidentifier(lhs);
-    // rhs = findidentifier(rhs);
+
     if(rhs->tokentype == NUMBERTOK) {
       if(rhs->symentry != NULL)
         printf("rhs is %s\n", rhs->symentry->namestring);
     }
 
-    if(lhs->tokentype == OPERATOR) {
-      // printf("Yup it's an operator, %d\n", lhs->whichval);
-    } 
-    // printf("lhs is %s, rhs is %s, op is %d\n", lhs->stringval, rhs->stringval, op->whichval);
-
     if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
-      /* Do something */
       /* Convert the rhs to an int */
       if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
         rhs = makeFix(rhs);
-
+        op->datatype = INTEGER;
       }
       /* Convert the rhs to a float */
       else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
         rhs = makefloat(rhs);
+        op->datatype = REAL;
       }
     }
 
     else {
       /* Cast (fix) rhs to int */
       if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
-        // printf("CASTING lhs %s\n", lhs->stringval);
         lhs = makefloat(lhs);
         op->datatype = REAL;
       }
       /* Cast rhs to float */
       else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
-        // printf("rhs type is %d\n", rhs->datatype);
-        // printf("CASTING rhs %s, (%f)\n", rhs->stringval,rhs->realval);
         rhs = makefloat(rhs);
         op->datatype = REAL;
       }
     }
-   
-
-    // printf("Op is %d\n", op->whichval);
-
-    // op->datatype = REAL;
 
   op->operands = lhs;          /* link operands to operator       */
     lhs->link = rhs;             /* link second operand to first    */
@@ -268,16 +254,13 @@ TOKEN makeif(TOKEN tok, TOKEN exp, TOKEN thenpart, TOKEN elsepart)
 
 TOKEN findidentifier(TOKEN tok) {
   if(EXIT) printf("ENTERING findidentifier\n");
-  // printf("Looking up identifier for %s\n", tok->stringval);
+
   SYMBOL sym = searchst(tok->stringval);
   if(sym != NULL) {
     if(sym->kind == CONSTSYM) {
-      // printf("Finding constant with id %s\n", tok->stringval);
-      // TOKEN newConst = talloc();
       tok->tokentype = NUMBERTOK;
       tok->datatype = sym->basicdt;
       tok->symentry = sym;
-      // strcpy(tok->stringval,sym->namestring);
 
       if(sym->basicdt == INTEGER) {
         tok->intval = sym->constval.intnum;
@@ -285,27 +268,16 @@ TOKEN findidentifier(TOKEN tok) {
       else if(sym->basicdt == REAL) {
         tok->realval = sym->constval.realnum;
       }
-      // else if(sym->basicdt == STRING) {
-      //   strcpy(sym->constval.stringconst, value->stringval);
-      // }
+      else if(sym->basicdt == STRING) {
+        strcpy(sym->constval.stringconst, tok->stringval);
+      }
       if(EXIT) printf("LEAVING findidentifier\n");
       return tok;
     }
-    else if (sym->kind == VARSYM) {
-      // printf("Finding variable with id %s\n", tok->stringval);
-      // TOKEN newVar = talloc();
-      // printf("Sym name is %s\n", sym->namestring);
-      // strcpy(newVar->stringval,sym->namestring);
-      tok->tokentype = IDENTIFIERTOK;
-      // printf("Sym type is %d\n", sym->basicdt);
-      tok->datatype = sym->basicdt;
 
-      // if(sym->basicdt == INTEGER) {
-      //   newVar->intval = sym->constval.intnum;
-      // }
-      // else if(sym->basicdt == REAL) {
-      //   newVar->realval = sym->constval.realnum;
-      // }
+    else if (sym->kind == VARSYM) {
+      tok->tokentype = IDENTIFIERTOK;
+      tok->datatype = sym->basicdt;
        if(EXIT) printf("LEAVING findidentifier\n");
       return tok;
     }
@@ -432,15 +404,14 @@ TOKEN getid(TOKEN tok) {
   else {
     tok->symentry = sym;
     symtype = sym->datatype;
-    // printf("%s\n", );
-    // if(symtype->kind == BASICTYPE || symtype->kind == POINTERSYM)
-      tok->datatype = symtype->basicdt;
+    tok->datatype = symtype->basicdt;
   }
 
   return tok;
 }
 
 TOKEN uminus(TOKEN minus, TOKEN value) {
+  /* Add a unary minus to a value */
   minus->operands = value;
   return minus;
 }
@@ -516,14 +487,11 @@ TOKEN makerepeat(TOKEN repeat, TOKEN statements, TOKEN until, TOKEN expr) {
     next = next->link;
   }
 
+  /* Add the if statement as the link to the end of the statements */
   next->link = makeif(iftok, expr, until = makeprogn(talloc(),NULL), NULL);
 
-  /* Next is now if */
-  // next = next->link;
+  /* until is a throw away token that we converted into an empty progn */
   until->link = makegoto(labeltok->datatype);
-  // ret->operands = makeif(iftok, expr, makeprogn(talloc(),talloc()), NULL);
-  // ret->link = statements;
-
   return ret;
 }
 
@@ -541,8 +509,9 @@ TOKEN label() {
   ret = talloc();
   ret->tokentype = OPERATOR;
   ret->whichval = LABELOP;
+
+  /* Since label doesn't use datatype for anything, store the label number in here */
   ret->datatype = labelnumber;
-  // ret->intval = labelnumber;
   labeltok = constant(labelnumber++);
   ret->operands = labeltok;
 
