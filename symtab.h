@@ -125,3 +125,4 @@ int DEBUG;
 int blocknumber;           /* Number of current block being compiled */
 int blockoffs[MAXBLOCKS];  /* Storage offsets for each block         */
 int basicsizes[5];
+SYMBOL inserttype(char name[], int siz);

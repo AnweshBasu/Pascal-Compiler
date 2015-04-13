@@ -83,16 +83,17 @@ TOKEN parseresult;
 
 %%
 
-  program    :  PROGRAM IDENTIFIER LPAREN IDENTIFIER RPAREN SEMICOLON block DOT { parseresult = 
+  program    :  PROGRAM IDENTIFIER LPAREN IDENTIFIER RPAREN SEMICOLON Lblock DOT { parseresult = 
                                                                    program($1, $2, makeprogn($3, $4), $7);}
              ;
   statement  :  BEGINBEGIN statement endpart
-                                       { $$ = makeprogn($1,cons($2, $3)); }
-             |  IF expr THEN statement endif   { $$ = makeif($1, $2, $4, $5); }
+                                       {$$ = makeprogn($1,cons($2, $3)); }
+             |  IF expr THEN statement endif   {$$ = makeif($1, $2, $4, $5); }
              |  assignment
              |  function
              |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$5,$6,$8);}
              |  REPEAT statements UNTIL expr {$$ = makerepeat($1, $2, $3, $4);}
+             |  NUMBER COLON statement { $$ = findlabel($1, $3); }
              ;
   statements :  statement SEMICOLON statements {$$ = cons($1,$3);}
              |  statement
@@ -104,17 +105,34 @@ TOKEN parseresult;
              ;
   varid      :  IDENTIFIER {$$ = varid($1);}
              ;
-  block      :  VAR varblock block {$$ = $3;}
-             |  CONST constblock block {$$ = $3;}
-             |  BEGINBEGIN statement endpart {$$ = makeprogn($1,cons($2, $3));}
+  Lblock     :  LABEL labelblock Cblock {$$ = $3;}
+             |  Cblock
+             ;
+  labelblock :  integerlist SEMICOLON {makelabel($1);}
+             ;
+  Cblock     :  CONST constblock Tblock {$$ = $3;}
+             |  Tblock
+             ;
+  Tblock     :  TYPE typeblock SEMICOLON Vblock {$$ = $4;}
+             |  Vblock
+             ;
+  typeblock  :  IDENTIFIER EQ type {maketype($1, $3);}
+             ;
+  Vblock     :  VAR varblock block {$$ = $3;}
+             |  block
+             ;
+  block      : BEGINBEGIN statement endpart {$$ = makeprogn($1,cons($2, $3));} 
              ;
   constblock :  constlist constblock
              |  constlist 
              ;
   constlist  :  IDENTIFIER EQ constant SEMICOLON {makeconst($1,$3);}
              ;
-  constant   :  NUMBER { $$ = $1; }
-             |  STRING { $$ = $1; }
+  integerlist:  NUMBER COMMA integerlist {$$ = cons($1, $3);}
+             |  NUMBER {$$ = $1; }
+             ;
+  constant   :  NUMBER {$$ = $1; }
+             |  STRING {$$ = $1; }
              ;
   varblock   :  varlist varblock
              |  varlist
@@ -138,17 +156,17 @@ TOKEN parseresult;
              ;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
              |  expr MINUS term                { $$ = binop($2, $1, $3); }
-             |  expr EQ expr                   { $$ = binop($2, $1, $3); }
+             |  expr EQ term                   { $$ = binop($2, $1, $3); }
              |  term 
              ;
   term       :  term TIMES factor              { $$ = binop($2, $1, $3); }
-             |  factor
+             |  factor {$$ = $1;}
              ;
   factor     :  LPAREN expr RPAREN             { $$ = $2; }
              |  identifier
              |  NUMBER
-             |  MINUS identifier {uminus($1,$2);}
-             |  MINUS NUMBER     {uminus($1,$2);}
+             |  MINUS identifier {opscons($1,$2);}
+             |  MINUS NUMBER     {opscons($1,$2);}
              |  STRING
              |  function 
              ;
@@ -303,6 +321,7 @@ TOKEN makeprogn(TOKEN tok, TOKEN statements)
 
 /* My functions */
 TOKEN makevars(TOKEN list, TOKEN type) {
+  printf("In makevars!\n");
   SYMBOL symtype = type->symtype;
   instvars(list, type);
 
@@ -325,6 +344,37 @@ TOKEN makeconst(TOKEN id, TOKEN value) {
   else if(sym->basicdt == STRING) {
     strcpy(sym->constval.stringconst, value->stringval);
   }
+
+  return id;
+}
+
+TOKEN makelabel(TOKEN intlist) {
+  // printf("In make label\n");
+  while(intlist != NULL) {
+    labels[labelnumber++] = intlist->intval;
+    TOKEN temp = intlist->link;
+    intlist->link = NULL;
+    intlist = temp;
+  }
+
+  return intlist;
+}
+
+// Type Name:
+//    kind      = TYPESYM
+//    datatype  = pointer to the type structure in the symbol table.
+//    size      = size of data item in addressing units (bytes).
+
+TOKEN maketype(TOKEN id, TOKEN type) {
+  SYMBOL typesym = searchst(type->stringval);
+  SYMBOL sym = inserttype(id->stringval, typesym->size);
+  sym->datatype = typesym;
+  // SYMBOL sym =  makesym(id->stringval);
+  // printf("%s\n", type->stringval);
+  // sym->datatype = searchst(type->stringval);
+  // sym->size = sym->datatype->size;
+
+  // installType(sym, 0);
 
   return id;
 }
@@ -370,6 +420,30 @@ TOKEN makeFix(TOKEN tok) {
   return fix;
 }
 
+TOKEN findlabel(TOKEN number, TOKEN statement) {
+  TOKEN ret, labeltok;
+  ret = talloc();
+  ret->tokentype = OPERATOR;
+  ret->whichval = LABELOP;
+
+  /* Since label doesn't use datatype for anything, store the label number in here */
+  int num = 0;
+  int i;
+
+  for(i = 0; i < 50; i++) {
+    if(labels[i] == number->intval) {
+      num = i;
+    }
+  }
+   ret->datatype = number->intval;
+   labeltok = constant(num);
+   ret->operands = labeltok;
+   ret->link = statement;
+   ret = makeprogn(number, ret);
+
+  return ret;
+}
+
 TOKEN findtype(TOKEN tok) {
   if(tok->tokentype != IDENTIFIERTOK) printf("Identifier expected, type()\n");
   SYMBOL sym = searchst(tok->stringval);
@@ -410,7 +484,7 @@ TOKEN getid(TOKEN tok) {
   return tok;
 }
 
-TOKEN uminus(TOKEN minus, TOKEN value) {
+TOKEN opscons(TOKEN minus, TOKEN value) {
   /* Add a unary minus to a value */
   minus->operands = value;
   return minus;
@@ -579,6 +653,7 @@ void instvars(TOKEN idlist, TOKEN typetok)
 };
     if (DEBUG) printst();
 }
+
  
 yyerror(s)
   char * s;

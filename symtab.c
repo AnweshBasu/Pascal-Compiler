@@ -91,6 +91,16 @@ SYMBOL insertsym(char name[])
     return sym;
   }
 
+  /* Insert a basic type into the symbol table */
+  SYMBOL inserttype(char name[], int siz)
+    { SYMBOL sym;
+      sym = insertsym(name);
+      sym->kind = TYPESYM;
+      sym->basicdt = 1;
+      sym->size = siz;
+      return sym;
+    }
+
 /* Search one level of the symbol table for the given name.         */
 /* Result is a pointer to the symbol table entry or NULL            */
 SYMBOL searchlev(char name[], int level)

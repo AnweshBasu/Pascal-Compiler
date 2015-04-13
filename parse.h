@@ -62,7 +62,7 @@ TOKEN appendst(TOKEN statements, TOKEN more);
 TOKEN dogoto(TOKEN tok, TOKEN labeltok);
 
 /* makelabel makes a new label, using labelnumber++ */
-TOKEN makelabel();
+TOKEN makelabel(TOKEN intlist);
 
 /* dolabel is the action for a label of the form   <number>: <statement>
    tok is a (now) unused token that is recycled. */
@@ -194,6 +194,8 @@ TOKEN talloc();
 
 /* My stuff */
 
+int labels[50] = {};
+
 TOKEN program();
 
 TOKEN block();
@@ -216,8 +218,10 @@ TOKEN label();
 TOKEN createtok(int what, int which);
 TOKEN copytok(TOKEN tok);
 TOKEN makeconst(TOKEN id, TOKEN value);
-TOKEN uminus(TOKEN minus, TOKEN value);
+TOKEN opscons(TOKEN minus, TOKEN value);
 TOKEN makefloat(TOKEN tok);
 TOKEN findidentifier(TOKEN tok);
 TOKEN makeFix(TOKEN tok);
 TOKEN makerepeat(TOKEN repeat, TOKEN statements, TOKEN until, TOKEN expr);
+TOKEN findlabel(TOKEN number, TOKEN statement);
+TOKEN maketype(TOKEN id, TOKEN type);

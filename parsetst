@@ -8,11 +8,11 @@ begin
 end.}
 
 (* graph1.pas *)
-program graph1(output);
-const d = 0.0625; {1/16, 16 lines for interval [x,x+1]}
-      s = 32; {32 character widths for interval [y,y+1]}
-      h = 34; {character position of x-axis}
-      c = 6.28318; {2*pi}  lim = 32;
+{program graph1(output);
+const d = 0.0625; 
+      s = 32;
+      h = 34;
+      c = 6.28318; lim = 32;
 var x,y : real;  i,n : integer;
 begin
    for i := 0 to lim do
@@ -26,4 +26,14 @@ begin
 	  	n := n-1
       until n=0
    end
+end.}
+
+program graph1(output);
+label 1492, 1776;
+const d = 0.0625;
+type poop = integer;
+var x : integer;
+begin
+   1492:
+   lim := 7
 end.
