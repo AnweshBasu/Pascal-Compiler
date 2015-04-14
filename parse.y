@@ -215,18 +215,12 @@ TOKEN cons(TOKEN item, TOKEN list)           /* add item to front of list */
 /* Adds an item at the end of the list */
 TOKEN combinelists(TOKEN list1, TOKEN list2) {
   TOKEN list1p = list1;
-  
+
   while(list1p->link != NULL) {
     list1p = list1p->link;
   } 
-
-  TOKEN list2p = list2;
-
-  while(list2p != NULL) {
-    list1p->link = list2p;
-    list1p = list1p->link;
-    list2p = list2p->link;
-  }
+  
+  list1p->link = list2;
 
   return list1;
 }
@@ -430,7 +424,7 @@ TOKEN makerecord(TOKEN fieldlist) {
     printf("Adding %s\n", fieldlist->stringval);
     offset += padding(offset, typesym->size);
     entry->offset = offset;
-    offset += typesym->size;
+    // offset += typesym->size;
     printf("Offset: %d\n", entry->offset);
     entry->size = typesym->size;
     printf("Size: %d\n", entry->size);
@@ -451,7 +445,7 @@ TOKEN makerecord(TOKEN fieldlist) {
       printf("Adding %s\n", fieldlist->stringval);
       offset += padding(offset, typesym->size);
       entry->offset = offset;
-      offset += typesym->size;
+      // offset += typesym->size;
       printf("Offset: %d\n", entry->offset);
       entry->size = typesym->size;
       printf("Size: %d\n", entry->size);
@@ -466,10 +460,10 @@ TOKEN makerecord(TOKEN fieldlist) {
   }
 
   /* Add the final padding to align the record to 8 bytes */
-    totalSize = offset + padding(offset, 8);
     SYMBOL recordsym = symalloc();
     recordsym->kind = RECORDSYM;
     recordsym->link = NULL;
+    totalSize = offset + padding(offset, alignsize(recordsym));
 
     // printf("TOP is %s\n", top->namestring);
     recordsym->datatype = top;

@@ -163,7 +163,7 @@ int alignsize(SYMBOL sym)
 }
 
 int padding(int offset, int size) {
-  return offset%size;
+  return size - offset%size;
 }
 
 /* Print one symbol table entry for debugging      */
