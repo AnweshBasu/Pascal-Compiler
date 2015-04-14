@@ -33,8 +33,11 @@ label 1492, 1776;
 const d = 0.0625;
 type foo = integer;
      bar = real;
-     complex = record re, im, one, two, three : real;
-                      john, jacob, jingle : integer end;
+     complex = record re : real;
+                      int : integer end;
+     super = record real, imag : real;
+                    rec : complex;
+                    last : char end;
 var x : foo;
 begin
    1492:

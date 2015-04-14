@@ -215,13 +215,14 @@ TOKEN cons(TOKEN item, TOKEN list)           /* add item to front of list */
 /* Adds an item at the end of the list */
 TOKEN combinelists(TOKEN list1, TOKEN list2) {
   TOKEN list1p = list1;
+  
   while(list1p->link != NULL) {
     list1p = list1p->link;
   } 
 
   TOKEN list2p = list2;
 
-  while(list2p->link != NULL) {
+  while(list2p != NULL) {
     list1p->link = list2p;
     list1p = list1p->link;
     list2p = list2p->link;
@@ -391,11 +392,18 @@ TOKEN makelabel(TOKEN intlist) {
 //    size      = size of data item in addressing units (bytes).
 
 TOKEN maketype(TOKEN id, TOKEN type) {
+  SYMBOL typesym;
+  /* This type token is a record */
+  if(!strcmp(type->stringval,"")) {
+    typesym = type->symtype;
+  }
+  else {
+    typesym = searchst(type->stringval);
+  }
 
-  // printf("Seg faulting here\n");
-  SYMBOL typesym = searchst(type->stringval);
   SYMBOL sym = inserttype(id->stringval, typesym->size);
   sym->datatype = typesym;
+
   // SYMBOL sym =  makesym(id->stringval);
   // printf("%s\n", type->stringval);
   // sym->datatype = searchst(type->stringval);
@@ -434,6 +442,7 @@ TOKEN makerecord(TOKEN fieldlist) {
 
     /* Move to the next token that does not contain the type operand */
     fieldlist = fieldlist->link;
+    // printf("Name is %s\n", fieldlist->stringval);
     /* Loop on each same type in the field list */
     while(fieldlist != NULL && fieldlist->operands == NULL) {
       SYMBOL entry = makesym(fieldlist->stringval);
@@ -466,7 +475,7 @@ TOKEN makerecord(TOKEN fieldlist) {
     recordsym->datatype = top;
     recordsym->size = totalSize;
     printf("Recordsym has pointer: %s, size: %d\n", recordsym->datatype->namestring, recordsym->size);
-    insertRecordSym(recordsym);
+    // insertRecordSym(recordsym);
 
     TOKEN ret = talloc();
     ret->symtype = recordsym;
