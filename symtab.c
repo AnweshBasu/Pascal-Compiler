@@ -91,6 +91,14 @@ SYMBOL insertsym(char name[])
     return sym;
   }
 
+  void insertRecordSym(SYMBOL sym) {
+    if ( symtab[blocknumber] == NULL )  /* Insert in 2-pointer queue */
+       symtab[blocknumber] = sym;
+       else symend[blocknumber]->link = sym;
+    symend[blocknumber] = sym;
+    sym->blocklevel = blocknumber;
+  }
+
   /* Insert a basic type into the symbol table */
   SYMBOL inserttype(char name[], int siz)
     { SYMBOL sym;
@@ -152,6 +160,10 @@ int alignsize(SYMBOL sym)
     return 8;
           break;
       }
+}
+
+int padding(int offset, int size) {
+  return offset%size;
 }
 
 /* Print one symbol table entry for debugging      */

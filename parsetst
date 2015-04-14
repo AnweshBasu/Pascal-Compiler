@@ -31,8 +31,11 @@ end.}
 program graph1(output);
 label 1492, 1776;
 const d = 0.0625;
-type poop = integer;
-var x : integer;
+type foo = integer;
+     bar = real;
+     complex = record re, im, one, two, three : real;
+                      john, jacob, jingle : integer end;
+var x : foo;
 begin
    1492:
    lim := 7

@@ -113,10 +113,13 @@ TOKEN parseresult;
   Cblock     :  CONST constblock Tblock {$$ = $3;}
              |  Tblock
              ;
-  Tblock     :  TYPE typeblock SEMICOLON Vblock {$$ = $4;}
+  Tblock     :  TYPE typeblock Vblock {$$ = $3;}
              |  Vblock
              ;
-  typeblock  :  IDENTIFIER EQ type {maketype($1, $3);}
+  typeblock  :  typelist typeblock
+             |  typelist
+             ;
+  typelist   : IDENTIFIER EQ type SEMICOLON {maketype($1, $3);}
              ;
   Vblock     :  VAR varblock block {$$ = $3;}
              |  block
@@ -143,6 +146,10 @@ TOKEN parseresult;
              |  IDENTIFIER {$$ = cons($1, NULL);}
              ;
   type       :  simpletype
+             |  RECORD fieldlist END {$$ = makerecord($2);}
+             ;
+  fieldlist  :  identifiers COLON type SEMICOLON fieldlist {$$ = combinelists(opscons($1,$3), $5);}
+             |  identifiers COLON type {$$ = opscons($1,$3);}
              ;
   simpletype :  IDENTIFIER {$$ = findtype($1);}
              ;
@@ -204,6 +211,24 @@ TOKEN cons(TOKEN item, TOKEN list)           /* add item to front of list */
        };
     return item;
   }
+
+/* Adds an item at the end of the list */
+TOKEN combinelists(TOKEN list1, TOKEN list2) {
+  TOKEN list1p = list1;
+  while(list1p->link != NULL) {
+    list1p = list1p->link;
+  } 
+
+  TOKEN list2p = list2;
+
+  while(list2p->link != NULL) {
+    list1p->link = list2p;
+    list1p = list1p->link;
+    list2p = list2p->link;
+  }
+
+  return list1;
+}
 
 TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
   { 
@@ -366,6 +391,8 @@ TOKEN makelabel(TOKEN intlist) {
 //    size      = size of data item in addressing units (bytes).
 
 TOKEN maketype(TOKEN id, TOKEN type) {
+
+  // printf("Seg faulting here\n");
   SYMBOL typesym = searchst(type->stringval);
   SYMBOL sym = inserttype(id->stringval, typesym->size);
   sym->datatype = typesym;
@@ -375,17 +402,85 @@ TOKEN maketype(TOKEN id, TOKEN type) {
   // sym->size = sym->datatype->size;
 
   // installType(sym, 0);
-
+  // printf("yup\n");
   return id;
 }
 
+TOKEN makerecord(TOKEN fieldlist) {
+  SYMBOL top = NULL;
+  SYMBOL last = NULL;
+  int totalSize = 0;
+  int offset = 0;
+
+  while(fieldlist != NULL) {
+    SYMBOL typesym = searchst(fieldlist->operands->stringval);
+
+    SYMBOL entry = makesym(fieldlist->stringval);
+    if(last != NULL) last->link = entry;
+    last = entry;
+    if(top == NULL) top = entry;
+    printf("Adding %s\n", fieldlist->stringval);
+    offset += padding(offset, typesym->size);
+    entry->offset = offset;
+    offset += typesym->size;
+    printf("Offset: %d\n", entry->offset);
+    entry->size = typesym->size;
+    printf("Size: %d\n", entry->size);
+    entry->datatype = typesym;
+    printf("TYPE: %s\n\n", entry->datatype->namestring);
+
+    // printf("Type is %s\n", typesym->namestring);
+    // printf("%s\n", fieldlist->stringval);
+
+    /* Move to the next token that does not contain the type operand */
+    fieldlist = fieldlist->link;
+    /* Loop on each same type in the field list */
+    while(fieldlist != NULL && fieldlist->operands == NULL) {
+      SYMBOL entry = makesym(fieldlist->stringval);
+      if(last != NULL) last->link = entry;
+      last = entry;
+      printf("Adding %s\n", fieldlist->stringval);
+      offset += padding(offset, typesym->size);
+      entry->offset = offset;
+      offset += typesym->size;
+      printf("Offset: %d\n", entry->offset);
+      entry->size = typesym->size;
+      printf("Size: %d\n", entry->size);
+      entry->datatype = typesym;
+      printf("TYPE: %s\n\n", entry->datatype->namestring);
+      // printf("%s\n", fieldlist->stringval);
+      fieldlist = fieldlist->link;
+    }
+    // printf("TOP IS %s\n", top->stringval);
+
+    // fieldlist = fieldlist->link;
+  }
+
+  /* Add the final padding to align the record to 8 bytes */
+    totalSize = offset + padding(offset, 8);
+    SYMBOL recordsym = symalloc();
+    recordsym->kind = RECORDSYM;
+    recordsym->link = NULL;
+
+    // printf("TOP is %s\n", top->namestring);
+    recordsym->datatype = top;
+    recordsym->size = totalSize;
+    printf("Recordsym has pointer: %s, size: %d\n", recordsym->datatype->namestring, recordsym->size);
+    insertRecordSym(recordsym);
+
+    TOKEN ret = talloc();
+    ret->symtype = recordsym;
+
+  return ret;
+}
+
 TOKEN makefloat(TOKEN tok) {
-  printf("Making float for %s\n\n", tok->stringval);
+  // printf("Making float for %s\n\n", tok->stringval);
   SYMBOL sym = searchst(tok->stringval);
 
   /* Couldn't find a symobl by it's name, probably a constant */
   if(sym == NULL && tok->symentry != NULL) {
-    printf("Searching %s\n", tok->symentry->namestring);
+    // printf("Searching %s\n", tok->symentry->namestring);
     sym = searchst(tok->symentry->namestring);
   }
 
@@ -394,7 +489,7 @@ TOKEN makefloat(TOKEN tok) {
   TOKEN cast = talloc();// maketoken(OPERATOR, FLOATOP);// talloc();
 
   if(sym->kind == CONSTSYM) {
-    printf("Casting const %s\n", tok->symentry->namestring);
+    // printf("Casting const %s\n", tok->symentry->namestring);
     cast->tokentype = NUMBERTOK;
     cast->datatype = REAL;
     cast->realval = (float)tok->intval;
@@ -488,6 +583,17 @@ TOKEN opscons(TOKEN minus, TOKEN value) {
   /* Add a unary minus to a value */
   minus->operands = value;
   return minus;
+}
+
+/* Adds an operands to the end of the list instead of the top */
+TOKEN opsconsend(TOKEN list, TOKEN value) {
+  /* Add a unary minus to a value */
+  TOKEN curr = list;
+  while(curr->link != NULL) {
+    curr = curr->link;
+  }
+  curr->operands = value;
+  return list;
 }
 
 TOKEN varid(TOKEN id) {

@@ -126,3 +126,5 @@ int blocknumber;           /* Number of current block being compiled */
 int blockoffs[MAXBLOCKS];  /* Storage offsets for each block         */
 int basicsizes[5];
 SYMBOL inserttype(char name[], int siz);
+int padding(int offset, int size);
+void insertRecordSym(SYMBOL sym);
