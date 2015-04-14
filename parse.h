@@ -107,7 +107,7 @@ void  instconst(TOKEN idtok, TOKEN consttok);
 
 /* makesubrange makes a SUBRANGE symbol table entry, puts the pointer to it
    into tok, and returns tok. */
-TOKEN makesubrange(TOKEN tok, int low, int high);
+TOKEN makesubrange(int low, int high);
 
 /* instenum installs an enumerated subrange in the symbol table,
    e.g., type color = (red, white, blue)

@@ -30,17 +30,15 @@ end.}
 
 program graph1(output);
 label 1492, 1776;
-const d = 0.0625;
-type foo = integer;
-     bar = real;
-     onechar = record uno : char;
-                      dos : integer end;
-     complex = record re : real;
-                      int : integer end;
-     super = record real, imag : real;
-                    rec : complex;
-                    last : char end;
-var x : foo;
+type complex = record re, im: real end;
+     color = (red, white, blue);
+     pp = ^ person;
+     person = record age:      integer;
+                     friend:   pp;
+                     location: complex;
+                     favorite: color;
+                     salary:   real end;
+var x : complex;
 begin
    1492:
    lim := 7

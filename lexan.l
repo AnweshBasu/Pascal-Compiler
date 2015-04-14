@@ -124,6 +124,7 @@ in        {return maketoken(OPERATOR, IN);}
 ">"       {return(maketoken(OPERATOR, GT));}
 ">="      {return(maketoken(OPERATOR, GE));}
 ":="      {return(maketoken(OPERATOR, ASSIGN));}
+"^"       {return(maketoken(OPERATOR, POINT));}
 "."       {return(maketoken(OPERATOR, DOT));}
 
 ","       {return(maketoken(DELIMITER, COMMA));}

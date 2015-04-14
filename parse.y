@@ -147,11 +147,14 @@ TOKEN parseresult;
              ;
   type       :  simpletype
              |  RECORD fieldlist END {$$ = makerecord($2);}
+             |  POINT IDENTIFIER {$$ = instpoint($1, $2);}
              ;
   fieldlist  :  identifiers COLON type SEMICOLON fieldlist {$$ = combinelists(opscons($1,$3), $5);}
              |  identifiers COLON type {$$ = opscons($1,$3);}
              ;
   simpletype :  IDENTIFIER {$$ = findtype($1);}
+             |  LPAREN identifiers RPAREN {$$ = instenum($2); }
+             |  constant DOTDOT constant {$$ = makesubrange($1->intval, $3->intval); }
              ;
   endpart    :  SEMICOLON statement endpart    { $$ = cons($2, $3); }
              |  END                            { $$ = NULL; }
@@ -219,7 +222,7 @@ TOKEN combinelists(TOKEN list1, TOKEN list2) {
   while(list1p->link != NULL) {
     list1p = list1p->link;
   } 
-  
+
   list1p->link = list2;
 
   return list1;
@@ -392,7 +395,7 @@ TOKEN maketype(TOKEN id, TOKEN type) {
     typesym = type->symtype;
   }
   else {
-    typesym = searchst(type->stringval);
+    typesym = searchins(type->stringval);
   }
 
   SYMBOL sym = inserttype(id->stringval, typesym->size);
@@ -424,7 +427,7 @@ TOKEN makerecord(TOKEN fieldlist) {
     printf("Adding %s\n", fieldlist->stringval);
     offset += padding(offset, typesym->size);
     entry->offset = offset;
-    // offset += typesym->size;
+    offset += typesym->size;
     printf("Offset: %d\n", entry->offset);
     entry->size = typesym->size;
     printf("Size: %d\n", entry->size);
@@ -445,7 +448,7 @@ TOKEN makerecord(TOKEN fieldlist) {
       printf("Adding %s\n", fieldlist->stringval);
       offset += padding(offset, typesym->size);
       entry->offset = offset;
-      // offset += typesym->size;
+      offset += typesym->size;
       printf("Offset: %d\n", entry->offset);
       entry->size = typesym->size;
       printf("Size: %d\n", entry->size);
@@ -475,6 +478,48 @@ TOKEN makerecord(TOKEN fieldlist) {
     ret->symtype = recordsym;
 
   return ret;
+}
+
+TOKEN makesubrange(int low, int high) {
+  SYMBOL subrange = symalloc();
+  subrange->kind = SUBRANGE;
+  subrange->basicdt = INTEGER;
+  subrange->lowbound = low;
+  subrange->highbound = high;
+  subrange->size = basicsizes[INTEGER];
+
+  TOKEN tok = talloc();
+  printf("%d .. %d\n", low,high);
+  tok->symtype = subrange;
+
+  return tok;
+}
+
+TOKEN instenum(TOKEN idlist) {
+  int size = 0;
+
+  while(idlist != NULL) {
+    TOKEN value = constant(size);
+    makeconst(idlist,value);
+
+    idlist = idlist->link;
+    size++;
+    free(value);
+  }
+
+  return makesubrange(0, size - 1);
+}
+
+TOKEN instpoint(TOKEN tok, TOKEN typename) {
+  SYMBOL pointer = symalloc();
+  pointer->kind = POINTERSYM;
+  pointer->datatype = searchins(typename->stringval);
+  pointer->size = basicsizes[POINTER];
+
+  tok = talloc();
+  tok->symtype = pointer;
+
+  return tok;
 }
 
 TOKEN makefloat(TOKEN tok) {
@@ -543,6 +588,7 @@ TOKEN findlabel(TOKEN number, TOKEN statement) {
 }
 
 TOKEN findtype(TOKEN tok) {
+  printf("Tok = %s\n", tok->stringval);
   if(tok->tokentype != IDENTIFIERTOK) printf("Identifier expected, type()\n");
   SYMBOL sym = searchst(tok->stringval);
   if(sym == NULL) printf("Type not found in symbol table, type()\n");
