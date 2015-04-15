@@ -148,6 +148,7 @@ TOKEN parseresult;
   type       :  simpletype
              |  RECORD fieldlist END {$$ = makerecord($2);}
              |  POINT IDENTIFIER {$$ = instpoint($1, $2);}
+             |  ARRAY LBRACKET simpletypes RBRACKET OF type { $$ = instarray($3, $6); }
              ;
   fieldlist  :  identifiers COLON type SEMICOLON fieldlist {$$ = combinelists(opscons($1,$3), $5);}
              |  identifiers COLON type {$$ = opscons($1,$3);}
@@ -155,6 +156,9 @@ TOKEN parseresult;
   simpletype :  IDENTIFIER {$$ = findtype($1);}
              |  LPAREN identifiers RPAREN {$$ = instenum($2); }
              |  constant DOTDOT constant {$$ = makesubrange($1->intval, $3->intval); }
+             ;
+  simpletypes:  simpletype COMMA simpletypes {$$ = cons($1,$3);}
+             |  simpletype
              ;
   endpart    :  SEMICOLON statement endpart    { $$ = cons($2, $3); }
              |  END                            { $$ = NULL; }
@@ -487,6 +491,8 @@ TOKEN makesubrange(int low, int high) {
   subrange->lowbound = low;
   subrange->highbound = high;
   subrange->size = basicsizes[INTEGER];
+  /* Add for referencing self in array */
+  subrange->datatype = subrange;
 
   TOKEN tok = talloc();
   printf("%d .. %d\n", low,high);
@@ -504,7 +510,7 @@ TOKEN instenum(TOKEN idlist) {
 
     idlist = idlist->link;
     size++;
-    free(value);
+    // free(value);
   }
 
   return makesubrange(0, size - 1);
@@ -520,6 +526,32 @@ TOKEN instpoint(TOKEN tok, TOKEN typename) {
   tok->symtype = pointer;
 
   return tok;
+}
+
+TOKEN instarray(TOKEN simpletypes, TOKEN typetok) {
+  SYMBOL sym = multidem(simpletypes, typetok);
+
+  TOKEN ret = talloc();
+  ret->symtype = sym;
+  return ret;
+}
+
+SYMBOL multidem(TOKEN simpletypes, TOKEN typetok) {
+  if(simpletypes == NULL) return typetok->symtype;
+
+  SYMBOL sym = symalloc();
+  SYMBOL simplesym = simpletypes->symtype;
+  sym->kind = ARRAYSYM;
+
+  /* Subrange */
+  if(simplesym->datatype != NULL) {
+    sym->lowbound = simplesym->datatype->lowbound;
+    sym->highbound = simplesym->datatype->highbound;
+  }
+
+  sym->datatype = multidem(simpletypes->link, typetok);
+
+  return sym;
 }
 
 TOKEN makefloat(TOKEN tok) {

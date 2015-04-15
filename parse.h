@@ -228,3 +228,4 @@ TOKEN findlabel(TOKEN number, TOKEN statement);
 TOKEN maketype(TOKEN id, TOKEN type);
 TOKEN makerecord(TOKEN fieldlist);
 TOKEN combinelists(TOKEN list1, TOKEN list2);
+SYMBOL multidem(TOKEN simpletypes, TOKEN typetok);
