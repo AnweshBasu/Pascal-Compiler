@@ -38,10 +38,11 @@ type complex = record re, im: real end;
                      location: complex;
                      favorite: color;
                      salary:   real end;
-     foo = 1..10;
 var c,d: complex; i, sum: integer;
-x: record re, im : real end;
-ac: array[1..10,color,real] of complex;
+    ac: array[1..10] of complex;
+    aco: array[1..10, color] of color;
+    john, mary, fred, ptr: pp;
+    people: array[1..20] of person;
 begin
    1492:
    lim := 7

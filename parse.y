@@ -550,6 +550,7 @@ SYMBOL multidem(TOKEN simpletypes, TOKEN typetok) {
   }
 
   sym->datatype = multidem(simpletypes->link, typetok);
+  sym->size = (sym->highbound - sym->lowbound + 1)*sym->datatype->size;
 
   return sym;
 }
