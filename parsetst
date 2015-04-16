@@ -44,6 +44,8 @@ var c,d: complex; i, sum: integer;
     john, mary, fred, ptr: pp;
     people: array[1..20] of person;
 begin
-   1492:
-   lim := 7
+   new(john);
+   new(mary);
+   new(fred);
+   john^.favorite := blue;
 end.

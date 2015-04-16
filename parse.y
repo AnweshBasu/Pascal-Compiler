@@ -348,7 +348,6 @@ TOKEN makeprogn(TOKEN tok, TOKEN statements)
 
 /* My functions */
 TOKEN makevars(TOKEN list, TOKEN type) {
-  printf("In makevars!\n");
   SYMBOL symtype = type->symtype;
   instvars(list, type);
 
@@ -396,14 +395,29 @@ TOKEN maketype(TOKEN id, TOKEN type) {
   SYMBOL typesym;
   /* This type token is a record */
   if(!strcmp(type->stringval,"")) {
+    // printf("WHY HERE %s, %d\n\n\n", id->stringval, type->symtype->size);
     typesym = type->symtype;
   }
   else {
-    typesym = searchins(type->stringval);
+    typesym = searchst(type->stringval);
+  }
+  /* Has this type already been declared? If so, define it */
+  SYMBOL sym = searchst(id->stringval);
+
+  if(sym == NULL) {
+   sym = inserttype(id->stringval, typesym->size);
+   sym->datatype = typesym;
   }
 
-  SYMBOL sym = inserttype(id->stringval, typesym->size);
-  sym->datatype = typesym;
+  else {
+    printf("Already Declared, %s Type sym size: %d\n", id->stringval, typesym->size);
+      sym->kind = TYPESYM;
+      sym->size = typesym->size;
+      sym->datatype = typesym;
+  }
+  // SYMBOL sym = inserttype(id->stringval, typesym->size);
+  // printf("Symbol id is %s, Type symbol %s\n\n\n", sym->namestring, typesym->namestring);
+  // sym->datatype = typesym;
 
   // SYMBOL sym =  makesym(id->stringval);
   // printf("%s\n", type->stringval);
@@ -428,15 +442,15 @@ TOKEN makerecord(TOKEN fieldlist) {
     if(last != NULL) last->link = entry;
     last = entry;
     if(top == NULL) top = entry;
-    printf("Adding %s\n", fieldlist->stringval);
+    // printf("Adding %s\n", fieldlist->stringval);
     offset += padding(offset, typesym->size);
     entry->offset = offset;
     offset += typesym->size;
-    printf("Offset: %d\n", entry->offset);
+    // printf("Offset: %d\n", entry->offset);
     entry->size = typesym->size;
-    printf("Size: %d\n", entry->size);
+    // printf("Size: %d\n", entry->size);
     entry->datatype = typesym;
-    printf("TYPE: %s\n\n", entry->datatype->namestring);
+    // printf("TYPE: %s\n\n", entry->datatype->namestring);
 
     // printf("Type is %s\n", typesym->namestring);
     // printf("%s\n", fieldlist->stringval);
@@ -449,15 +463,15 @@ TOKEN makerecord(TOKEN fieldlist) {
       SYMBOL entry = makesym(fieldlist->stringval);
       if(last != NULL) last->link = entry;
       last = entry;
-      printf("Adding %s\n", fieldlist->stringval);
+      // printf("Adding %s\n", fieldlist->stringval);
       offset += padding(offset, typesym->size);
       entry->offset = offset;
       offset += typesym->size;
-      printf("Offset: %d\n", entry->offset);
+      // printf("Offset: %d\n", entry->offset);
       entry->size = typesym->size;
-      printf("Size: %d\n", entry->size);
+      // printf("Size: %d\n", entry->size);
       entry->datatype = typesym;
-      printf("TYPE: %s\n\n", entry->datatype->namestring);
+      // printf("TYPE: %s\n\n", entry->datatype->namestring);
       // printf("%s\n", fieldlist->stringval);
       fieldlist = fieldlist->link;
     }
@@ -475,7 +489,7 @@ TOKEN makerecord(TOKEN fieldlist) {
     // printf("TOP is %s\n", top->namestring);
     recordsym->datatype = top;
     recordsym->size = totalSize;
-    printf("Recordsym has pointer: %s, size: %d\n", recordsym->datatype->namestring, recordsym->size);
+    // printf("Recordsym has pointer: %s, size: %d\n", recordsym->datatype->namestring, recordsym->size);
     // insertRecordSym(recordsym);
 
     TOKEN ret = talloc();
@@ -495,7 +509,6 @@ TOKEN makesubrange(int low, int high) {
   subrange->datatype = subrange;
 
   TOKEN tok = talloc();
-  printf("%d .. %d\n", low,high);
   tok->symtype = subrange;
 
   return tok;
@@ -517,6 +530,7 @@ TOKEN instenum(TOKEN idlist) {
 }
 
 TOKEN instpoint(TOKEN tok, TOKEN typename) {
+  // printf("POINTER\n");
   SYMBOL pointer = symalloc();
   pointer->kind = POINTERSYM;
   pointer->datatype = searchins(typename->stringval);
@@ -621,7 +635,7 @@ TOKEN findlabel(TOKEN number, TOKEN statement) {
 }
 
 TOKEN findtype(TOKEN tok) {
-  printf("Tok = %s\n", tok->stringval);
+  // printf("Tok = %s\n", tok->stringval);
   if(tok->tokentype != IDENTIFIERTOK) printf("Identifier expected, type()\n");
   SYMBOL sym = searchst(tok->stringval);
   if(sym == NULL) printf("Type not found in symbol table, type()\n");
@@ -760,9 +774,33 @@ TOKEN makerepeat(TOKEN repeat, TOKEN statements, TOKEN until, TOKEN expr) {
 TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
   TOKEN ret = createtok(OPERATOR,FUNCALLOP);
   id = getid(id);
-  id->link = args;
-  ret->operands = id;
-  ret->datatype = id->datatype;
+
+  /* Hard code new and write here */
+  if(!strcmp(id->stringval, "new")) {
+    TOKEN assign = createtok(OPERATOR,ASSIGNOP);
+
+    /* Find the argument symbol */
+    SYMBOL sym = searchst(args->stringval);
+
+    /* Argname -> Pointer Type -> Namlesspointer -> Object pointed to -> size */
+    TOKEN size = constant(sym->datatype->datatype->datatype->size);
+    // printf("Sym type is %s, Size = %d\n", symptr->datatype->datatype->namestring, size->intval);
+
+    id->link = size;
+    ret->operands = id;
+    ret->datatype = id->datatype;
+
+    args->link = ret;
+    assign->operands = args;
+    return assign;
+  }
+
+  else {
+    id->link = args;
+    ret->operands = id;
+    ret->datatype = id->datatype;
+  }
+
   return ret;
 }
 

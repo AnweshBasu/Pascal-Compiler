@@ -99,12 +99,12 @@ SYMBOL insertsym(char name[])
     sym->blocklevel = blocknumber;
   }
 
-  /* Insert a basic type into the symbol table */
+  /* Insert a new type into the symbol table */
   SYMBOL inserttype(char name[], int siz)
     { SYMBOL sym;
       sym = insertsym(name);
       sym->kind = TYPESYM;
-      sym->basicdt = 1;
+      // sym->basicdt = 1;
       sym->size = siz;
       return sym;
     }
