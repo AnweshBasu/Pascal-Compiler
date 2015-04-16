@@ -230,3 +230,4 @@ TOKEN makerecord(TOKEN fieldlist);
 TOKEN combinelists(TOKEN list1, TOKEN list2);
 SYMBOL multidem(TOKEN simpletypes, TOKEN typetok);
 SYMBOL skipTypes(SYMBOL sym);
+int getArefType(TOKEN tok);

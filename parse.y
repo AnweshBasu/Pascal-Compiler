@@ -272,6 +272,17 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
         printf("rhs is %s\n", rhs->symentry->namestring);
     }
 
+    // if(lhs->tokentype == OPERATOR && lhs->whichval == AREFOP) {
+    //   // lhs->datatype = getArefType(lhs);
+    //   printf("LHS is aref, %d\n", lhs->datatype);
+    //   printf("RHS is , %d\n", rhs->datatype);
+    // }
+
+    // if(rhs->tokentype == OPERATOR && rhs->whichval == AREFOP) {
+    //   // rhs->datatype = getArefType(rhs);
+    //   printf("RHS is aref\n");
+    // }
+
     if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
       /* Convert the rhs to an int */
       if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
@@ -281,7 +292,9 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
       }
       /* Convert the rhs to a float */
       else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
+        printf("Assign, rhs = %d\n", rhs->intval);
         rhs = makefloat(rhs);
+        printf("Float?! %d\n", rhs->datatype);
         op->datatype = REAL;
       }
     }
@@ -311,6 +324,16 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
        if(EXIT) printf("LEAVING binop\n");
     return op;
   }
+
+int getArefType(TOKEN tok) {
+  while(tok->link != NULL) {
+    tok = tok->link;
+  }
+
+  printf("Aref last type was %d\n", tok->datatype);
+
+  return tok->datatype;
+}
 
 TOKEN makeif(TOKEN tok, TOKEN exp, TOKEN thenpart, TOKEN elsepart)
   {  tok->tokentype = OPERATOR;  /* Make it look like an operator   */
@@ -623,7 +646,7 @@ TOKEN dopoint(TOKEN var, TOKEN tok) {
   tok = createtok(OPERATOR,POINTEROP);
   tok->operands = var;
 
-  printf("Kind is %d\n", sym->kind);
+  // printf("Kind is %d\n", sym->kind);
   sym = skipTypes(sym);
 
   /* Sym is a pointersym, move it over one */
@@ -631,9 +654,10 @@ TOKEN dopoint(TOKEN var, TOKEN tok) {
 
   sym = skipTypes(sym);
 
-  printf("Kind after is %d\n", sym->kind);
+  // printf("Kind after is %d\n", sym->kind);
 
   tok->symtype = sym;
+  // printf("Var is %s, Type is %d\n", var->stringval, sym->basicdt);
 
   return tok;
 }
@@ -653,8 +677,9 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   // printf("Record name %s\n", record->namestring);
 
 
-  // printf("\n\nField %s, Type %d\n\n", field->stringval, record->basicdt);
+  printf("\n\nField %s, Type %d\n\n", field->stringval, record->basicdt);
   dot->datatype = record->basicdt;
+  // var->datatype = record->basicdt;
   int offset = record->offset;
 
   dot->operands = var;
@@ -690,6 +715,7 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
 TOKEN makefloat(TOKEN tok) {
   // printf("Making float for %s\n\n", tok->stringval);
   SYMBOL sym = searchst(tok->stringval);
+  TOKEN cast = talloc();// maketoken(OPERATOR, FLOATOP);// talloc();
 
   /* Couldn't find a symobl by it's name, probably a constant */
   if(sym == NULL && tok->symentry != NULL) {
@@ -697,16 +723,18 @@ TOKEN makefloat(TOKEN tok) {
     sym = searchst(tok->symentry->namestring);
   }
 
-  if(sym == NULL) return tok;
-
-  TOKEN cast = talloc();// maketoken(OPERATOR, FLOATOP);// talloc();
-
-  if(sym->kind == CONSTSYM) {
-    // printf("Casting const %s\n", tok->symentry->namestring);
+  // TODO look into this
+  if(sym == NULL || sym->kind == CONSTSYM) {
     cast->tokentype = NUMBERTOK;
     cast->datatype = REAL;
     cast->realval = (float)tok->intval;
-  }
+    return cast;
+  } 
+
+
+  // if(sym->kind == CONSTSYM) {
+  //   // printf("Casting const %s\n", tok->symentry->namestring);
+  // }
 
   else if(sym->kind == VARSYM) {
     cast->tokentype = OPERATOR;
