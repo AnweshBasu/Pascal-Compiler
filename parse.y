@@ -166,7 +166,7 @@ TOKEN parseresult;
   endif      :  ELSE statement                 { $$ = $2; }
              |  /* empty */                    { $$ = NULL; }
              ;
-  assignment :  identifier ASSIGN expr         { $$ = binop($2, $1, $3); }
+  assignment :  variable ASSIGN expr         { $$ = binop($2, $1, $3); }
              ;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
              |  expr MINUS term                { $$ = binop($2, $1, $3); }
@@ -177,7 +177,7 @@ TOKEN parseresult;
              |  factor {$$ = $1;}
              ;
   factor     :  LPAREN expr RPAREN             { $$ = $2; }
-             |  identifier
+             |  variable
              |  NUMBER
              |  MINUS identifier {opscons($1,$2);}
              |  MINUS NUMBER     {opscons($1,$2);}
@@ -186,6 +186,37 @@ TOKEN parseresult;
              ;
   identifier : IDENTIFIER {$$ = findidentifier($1); }
              ;
+  variable   : identifier {$$ = $1; }
+             | variable DOT IDENTIFIER { $$ = reducedot($1,$2,$3);}
+             | variable POINT { $$ = dopoint($1,$2); }
+             ;
+  // deref      : deref POINT  defre{$$ = $1;}
+  //            | POINT
+  //            ; 
+  // deref      : DPOINTER
+  //            | DDOT
+  //            | IDENTIFIER {$$ = findidentifier($1);}
+  //            ;
+  // DPOINTER   : IDENTIFIER POINT deref {$$ = cons(dopoint($1,$2),$3);}
+  //            ;
+  // DDOT       : deref DOT IDENTIFIER {$$ = cons($1,reducedot($1,$2,$3)); }
+             //;
+
+
+
+
+
+
+
+
+
+
+  // deref      : IDENTIFIER POINT DOT deref {$$ = cons(dopoint($1, $2),$4);}
+  //            | IDENTIFIER POINT DOT {$$ = dopoint($1, $2);}
+  //            | IDENTIFIER DOT IDENTIFIER deref{$$ = cons(reducedot($1, $2, $3),$4); }
+  //            | IDENTIFIER DOT IDENTIFIER {$$ = reducedot($1, $2, $3); }
+  //            | IDENTIFIER {$$ = findidentifier($1);}
+  //            ;
 
 %%
 
@@ -323,6 +354,8 @@ TOKEN findidentifier(TOKEN tok) {
     else if (sym->kind == VARSYM) {
       tok->tokentype = IDENTIFIERTOK;
       tok->datatype = sym->basicdt;
+      tok->symentry = skipTypes(sym->datatype);
+
        if(EXIT) printf("LEAVING findidentifier\n");
       return tok;
     }
@@ -331,6 +364,13 @@ TOKEN findidentifier(TOKEN tok) {
   }
   if(EXIT) printf("LEAVING findidentifier\n");
   else return tok;
+}
+
+SYMBOL skipTypes(SYMBOL sym) {
+  while(sym->kind == TYPESYM) {
+    sym = sym->datatype;
+  }
+  return sym;
 }
 
 TOKEN makeprogn(TOKEN tok, TOKEN statements)
@@ -415,6 +455,7 @@ TOKEN maketype(TOKEN id, TOKEN type) {
       sym->size = typesym->size;
       sym->datatype = typesym;
   }
+  sym->basicdt = typesym->basicdt;
   // SYMBOL sym = inserttype(id->stringval, typesym->size);
   // printf("Symbol id is %s, Type symbol %s\n\n\n", sym->namestring, typesym->namestring);
   // sym->datatype = typesym;
@@ -534,6 +575,7 @@ TOKEN instpoint(TOKEN tok, TOKEN typename) {
   SYMBOL pointer = symalloc();
   pointer->kind = POINTERSYM;
   pointer->datatype = searchins(typename->stringval);
+  pointer->basicdt = POINTER;
   pointer->size = basicsizes[POINTER];
 
   tok = talloc();
@@ -567,6 +609,76 @@ SYMBOL multidem(TOKEN simpletypes, TOKEN typetok) {
   sym->size = (sym->highbound - sym->lowbound + 1)*sym->datatype->size;
 
   return sym;
+}
+
+TOKEN dopoint(TOKEN var, TOKEN tok) {
+  SYMBOL sym = var->symentry;
+  // printf("Token name %s\n", var->stringval);
+  // printf("Type is : %s\n", sym->namestring);
+
+  tok = createtok(OPERATOR,POINTEROP);
+  tok->operands = var;
+
+  printf("Kind is %d\n", sym->kind);
+  sym = skipTypes(sym);
+
+  /* Sym is a pointersym, move it over one */
+  sym = sym->datatype;
+
+  sym = skipTypes(sym);
+
+  printf("Kind after is %d\n", sym->kind);
+
+  tok->symtype = sym;
+
+  return tok;
+}
+
+TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
+  dot = createtok(OPERATOR,AREFOP);
+  SYMBOL record = var->symtype;
+
+  printf("Record field  #1 %s, kind %d\n", record->datatype->namestring, record->kind);
+  record = record->datatype;
+
+  while(record != NULL && strcmp(field->stringval, record->namestring)) {
+    record = record->link;
+  }
+  // record = record->link;
+
+  printf("Record name %s\n", record->namestring);
+
+
+  int offset = record->offset;
+
+  dot->operands = var;
+  dot->operands->link = constant(offset);//constant(offset);
+  dot->symtype = skipTypes(record->datatype);
+  dot->symentry = skipTypes(record->datatype);
+  return dot;
+
+  printf("Var: %s\n", var->symtype->namestring);
+  if(var->link != NULL) printf("Var: %s\n", var->link->stringval);
+  return dot;
+
+  /* Lookup type of var (must be a record or an array) */
+  // SYMBOL sym = searchst(var->stringval);
+  // SYMBOL record = sym->datatype->datatype->datatype->datatype->datatype;
+
+  // while(record != NULL && strcmp(field->stringval, record->namestring)) {
+  //   record = record->link;
+  // }
+
+  // record = record->link;
+
+
+  // printf("\nName is %s\n\n", record->namestring);
+  // // SYMBOL sym = searchst(field->stringval);
+  // int offset = record->offset;
+
+  // dot->operands = constant(offset);
+  // dot->symtype = record;
+  // return dot;
 }
 
 TOKEN makefloat(TOKEN tok) {

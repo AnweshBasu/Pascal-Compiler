@@ -47,5 +47,5 @@ begin
    new(john);
    new(mary);
    new(fred);
-   john^.favorite := blue;
+   john^.friend^.friend^.location := 4.5
 end.
