@@ -44,8 +44,19 @@ var c,d: complex; i, sum: integer;
     john, mary, fred, ptr: pp;
     people: array[1..20] of person;
 begin
-   new(john);
+ new(john);
    new(mary);
    new(fred);
-   john^.friend^.friend^.location := 4.5
+   john^.favorite := blue;
+   john^.age := 19;
+1492:
+   john^.friend := mary;
+   john^.salary := 40000.0;
+   john^.location.re := 3;
+   mary^.age := 21;
+   mary^.friend := fred;
+1776:
+   fred^.age := 20;
+   fred^.friend := 0;
+   john^.friend^.friend^.location.im := 4.5
 end.

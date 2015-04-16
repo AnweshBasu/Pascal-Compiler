@@ -275,6 +275,7 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
     if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
       /* Convert the rhs to an int */
       if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
+        printf("LHS is %s\n", lhs->stringval);
         rhs = makeFix(rhs);
         op->datatype = INTEGER;
       }
@@ -355,6 +356,7 @@ TOKEN findidentifier(TOKEN tok) {
       tok->tokentype = IDENTIFIERTOK;
       tok->datatype = sym->basicdt;
       tok->symentry = skipTypes(sym->datatype);
+      tok->symtype = tok->symentry;
 
        if(EXIT) printf("LEAVING findidentifier\n");
       return tok;
@@ -491,6 +493,7 @@ TOKEN makerecord(TOKEN fieldlist) {
     entry->size = typesym->size;
     // printf("Size: %d\n", entry->size);
     entry->datatype = typesym;
+    entry->basicdt = typesym->basicdt;
     // printf("TYPE: %s\n\n", entry->datatype->namestring);
 
     // printf("Type is %s\n", typesym->namestring);
@@ -512,6 +515,7 @@ TOKEN makerecord(TOKEN fieldlist) {
       entry->size = typesym->size;
       // printf("Size: %d\n", entry->size);
       entry->datatype = typesym;
+      entry->basicdt = typesym->basicdt;
       // printf("TYPE: %s\n\n", entry->datatype->namestring);
       // printf("%s\n", fieldlist->stringval);
       fieldlist = fieldlist->link;
@@ -612,7 +616,7 @@ SYMBOL multidem(TOKEN simpletypes, TOKEN typetok) {
 }
 
 TOKEN dopoint(TOKEN var, TOKEN tok) {
-  SYMBOL sym = var->symentry;
+  SYMBOL sym = var->symtype;
   // printf("Token name %s\n", var->stringval);
   // printf("Type is : %s\n", sym->namestring);
 
@@ -638,7 +642,7 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   dot = createtok(OPERATOR,AREFOP);
   SYMBOL record = var->symtype;
 
-  printf("Record field  #1 %s, kind %d\n", record->datatype->namestring, record->kind);
+  // printf("Record field  #1 %s, kind %d\n", record->datatype->namestring, record->kind);
   record = record->datatype;
 
   while(record != NULL && strcmp(field->stringval, record->namestring)) {
@@ -646,15 +650,17 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   }
   // record = record->link;
 
-  printf("Record name %s\n", record->namestring);
+  // printf("Record name %s\n", record->namestring);
 
 
+  // printf("\n\nField %s, Type %d\n\n", field->stringval, record->basicdt);
+  dot->datatype = record->basicdt;
   int offset = record->offset;
 
   dot->operands = var;
   dot->operands->link = constant(offset);//constant(offset);
   dot->symtype = skipTypes(record->datatype);
-  dot->symentry = skipTypes(record->datatype);
+  // dot->symentry = skipTypes(record->datatype);
   return dot;
 
   printf("Var: %s\n", var->symtype->namestring);
