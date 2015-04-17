@@ -44,7 +44,7 @@ var c,d: complex; i, sum: integer;
     john, mary, fred, ptr: pp;
     people: array[1..20] of person;
 begin
- new(john);
+   new(john);
    new(mary);
    new(fred);
    john^.favorite := blue;
@@ -59,6 +59,17 @@ begin
    fred^.age := 20;
    fred^.friend := nil;
    john^.friend^.friend^.location.im := 4.5;
+   ac[7].re := john^.salary;
+   ptr := john;
+   sum := 0;
+   i := 1;
+   while ptr <> nil do
+     begin
+   sum := sum + ptr^.age;
    people[i].age := ptr^.age;
-   aco[i,white] := john^.favorite
+   aco[i,white] := john^.favorite;
+   ptr := ptr^.friend;
+   i := i + 1
+     end;
+   write('i = ')
 end.

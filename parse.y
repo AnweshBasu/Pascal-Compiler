@@ -94,6 +94,7 @@ TOKEN parseresult;
              |  FOR varid ASSIGN expr TO expr DO statement {$$ = forloop($1,$2,$3,$4,$5,$6,$8);}
              |  REPEAT statements UNTIL expr {$$ = makerepeat($1, $2, $3, $4);}
              |  NUMBER COLON statement { $$ = findlabel($1, $3); }
+             |  WHILE expr DO statement { $$ = makewhile($1,$2,$3,$4); }
              ;
   statements :  statement SEMICOLON statements {$$ = cons($1,$3);}
              |  statement
@@ -174,6 +175,7 @@ TOKEN parseresult;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
              |  expr MINUS term                { $$ = binop($2, $1, $3); }
              |  expr EQ term                   { $$ = binop($2, $1, $3); }
+             |  expr NE term                   { $$ = binop($2, $1, $3); }
              |  term 
              ;
   term       :  term TIMES factor              { $$ = binop($2, $1, $3); }
@@ -628,6 +630,14 @@ TOKEN makesubrange(int low, int high) {
   tok->tokentype = NUMBERTOK;
 
   return tok;
+}
+
+TOKEN makewhile(TOKEN tok, TOKEN expr, TOKEN tokb, TOKEN statement) {
+  TOKEN labeltok = label();
+  TOKEN ret = makeprogn(tok, labeltok);
+  ret->operands->link = makeif(talloc(), expr, statement, NULL);
+
+  return ret;
 }
 
 TOKEN instenum(TOKEN idlist) {
