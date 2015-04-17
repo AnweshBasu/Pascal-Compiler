@@ -168,6 +168,9 @@ TOKEN parseresult;
              ;
   assignment :  variable ASSIGN expr         { $$ = binop($2, $1, $3); }
              ;
+  expressions: expr COMMA expressions {$$ = cons($1, $2); }
+             | expr
+             ;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
              |  expr MINUS term                { $$ = binop($2, $1, $3); }
              |  expr EQ term                   { $$ = binop($2, $1, $3); }
@@ -179,16 +182,18 @@ TOKEN parseresult;
   factor     :  LPAREN expr RPAREN             { $$ = $2; }
              |  variable
              |  NUMBER
-             |  MINUS identifier {opscons($1,$2);}
+             |  MINUS variable {opscons($1,$2);}
              |  MINUS NUMBER     {opscons($1,$2);}
              |  STRING
              |  function 
              ;
   identifier : IDENTIFIER {$$ = findidentifier($1); }
+             | NIL { $$ = constant(0); }
              ;
   variable   : identifier {$$ = $1; }
              | variable DOT IDENTIFIER { $$ = reducedot($1,$2,$3);}
              | variable POINT { $$ = dopoint($1,$2); }
+             | variable LBRACKET expressions RBRACKET {$$ = arrayref($1,$2,$3,$4);}
              ;
   // deref      : deref POINT  defre{$$ = $1;}
   //            | POINT
@@ -376,6 +381,7 @@ TOKEN findidentifier(TOKEN tok) {
     }
 
     else if (sym->kind == VARSYM) {
+      printf("Found %s\n", sym->datatype->namestring);
       tok->tokentype = IDENTIFIERTOK;
       tok->datatype = sym->basicdt;
       tok->symentry = skipTypes(sym->datatype);
@@ -663,27 +669,45 @@ TOKEN dopoint(TOKEN var, TOKEN tok) {
 }
 
 TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
-  dot = createtok(OPERATOR,AREFOP);
   SYMBOL record = var->symtype;
+  int oldOffset = 0;
+  bool reuse = false;
+
+  if(var->tokentype == OPERATOR && var->whichval == AREFOP && var->operands->link->tokentype == NUMBERTOK) {
+    // dot = createtok(OPERATOR,AREFOP);
+    dot = var;
+    oldOffset = var->operands->link->intval;
+    reuse = true;
+  }
+
+  else {
+    dot = createtok(OPERATOR,AREFOP);
+  }
 
   // printf("Record field  #1 %s, kind %d\n", record->datatype->namestring, record->kind);
+  /* Move to the first record entry */
   record = record->datatype;
+  printf("Reduce Dot %s\n", record->namestring);
 
   while(record != NULL && strcmp(field->stringval, record->namestring)) {
     record = record->link;
   }
   // record = record->link;
 
-  // printf("Record name %s\n", record->namestring);
+  printf("Record name %s\n", record->namestring);
 
 
   printf("\n\nField %s, Type %d\n\n", field->stringval, record->basicdt);
   dot->datatype = record->basicdt;
   // var->datatype = record->basicdt;
-  int offset = record->offset;
+  int offset = record->offset + oldOffset;
 
-  dot->operands = var;
+  if(!reuse) {
+    dot->operands = var;
+  }
+  
   dot->operands->link = constant(offset);//constant(offset);
+
   dot->symtype = skipTypes(record->datatype);
   // dot->symentry = skipTypes(record->datatype);
   return dot;
@@ -710,6 +734,68 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   // dot->operands = constant(offset);
   // dot->symtype = record;
   // return dot;
+}
+
+TOKEN arrayref(TOKEN arr, TOKEN tok, TOKEN subs, TOKEN tokb) {
+  int index = 0;
+  int offset = 0;
+  SYMBOL array = arr->symtype;
+
+  while(subs != NULL) {
+    index = subs->intval;
+    // index = (array->highbound - array->lowbound - 1) + subs->intval;
+    offset = (index - array->lowbound) * array->datatype->size;
+
+    /* Move to the next array */
+    array = array->datatype;
+    // array = skipTypes(array);
+
+    // printf("Index = %d Offset = %d\n", subs->intval, offset);
+    subs = subs->link;
+  }
+
+  TOKEN ret = createtok(OPERATOR,AREFOP);
+  array = skipTypes(array);
+  ret->operands = arr;
+  ret->operands->link = constant(offset);
+  ret->symtype = array;
+
+  return ret;
+  tok = talloc();
+  tok->operands = arr;
+  tok->operands->symtype = array;
+
+  /* Increment the offsets */
+  // if(array->kind == RECORDSYM) {
+  //   /* Move to the first entry */
+  //   array = array->datatype;
+  //   while(array != NULL) {
+  //   printf("Type!! %s\n", array->namestring);
+  //     array->offset += offset;
+  //     array = array->link;
+  //   }
+  // }
+
+  // else {
+  //   array->offset += offset;
+  // }
+
+
+  return tok;
+  tok->operands = arr;
+  // tok->link = constant(5);
+  tok->operands->link = constant(2);
+  array = skipTypes(array);
+  array->offset = constant(50);
+
+  tok->operands->symtype = array;
+  // tok->symentry = array;
+  // dot->operands = var;
+  // dot->operands->link = constant(offset);//constant(offset);
+  // dot->symtype = skipTypes(record->datatype);
+
+  printf("Array for %s, with size %d\n", arr->stringval, arr->symtype->size);
+  return tok;
 }
 
 TOKEN makefloat(TOKEN tok) {

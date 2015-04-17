@@ -57,6 +57,7 @@ begin
    mary^.friend := fred;
 1776:
    fred^.age := 20;
-   fred^.friend := 0;
-   john^.friend^.friend^.location.im := 4.5
+   fred^.friend := nil;
+   john^.friend^.friend^.location.im := 4.5;
+   ac[7].re := 8.0
 end.
