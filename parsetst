@@ -71,5 +71,11 @@ begin
    ptr := ptr^.friend;
    i := i + 1
      end;
-   write('i = ')
+   write('i = ');
+   writeln(i);
+   write('Sum of ages = ');
+   writeln(sum);
+   write('Fred loc im = ');
+   writeln(fred^.location.im);
+   if sum < 3 then goto 1776
 end.

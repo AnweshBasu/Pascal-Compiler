@@ -95,6 +95,7 @@ TOKEN parseresult;
              |  REPEAT statements UNTIL expr {$$ = makerepeat($1, $2, $3, $4);}
              |  NUMBER COLON statement { $$ = findlabel($1, $3); }
              |  WHILE expr DO statement { $$ = makewhile($1,$2,$3,$4); }
+             |  GOTO NUMBER { $$ = makegoto(getLabelNum($2->intval)); }
              ;
   statements :  statement SEMICOLON statements {$$ = cons($1,$3);}
              |  statement
@@ -176,6 +177,9 @@ TOKEN parseresult;
              |  expr MINUS term                { $$ = binop($2, $1, $3); }
              |  expr EQ term                   { $$ = binop($2, $1, $3); }
              |  expr NE term                   { $$ = binop($2, $1, $3); }
+             |  expr LT term                   { $$ = binop($2, $1, $3); }
+             |  expr GT term                   { $$ = binop($2, $1, $3); }
+             |  expr GE term                   { $$ = binop($2, $1, $3); }
              |  term 
              ;
   term       :  term TIMES factor              { $$ = binop($2, $1, $3); }
@@ -500,6 +504,18 @@ TOKEN makelabel(TOKEN intlist) {
   return intlist;
 }
 
+int getLabelNum(int num) {
+  int ret = 0;
+  int i;
+  for(i = 0; i < 50; i++) {
+    if(labels[i] == num) {
+      ret = i;
+    }
+  }
+
+  return ret;
+}
+
 // Type Name:
 //    kind      = TYPESYM
 //    datatype  = pointer to the type structure in the symbol table.
@@ -636,6 +652,15 @@ TOKEN makewhile(TOKEN tok, TOKEN expr, TOKEN tokb, TOKEN statement) {
   TOKEN labeltok = label();
   TOKEN ret = makeprogn(tok, labeltok);
   ret->operands->link = makeif(talloc(), expr, statement, NULL);
+
+  /* Statement is a progn */
+  statement = statement->operands;
+
+  while(statement->link != NULL) {
+    statement = statement->link;
+  }
+
+  statement->link = makegoto(labeltok->datatype);
 
   return ret;
 }
