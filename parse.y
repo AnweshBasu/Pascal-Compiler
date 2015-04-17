@@ -1139,6 +1139,43 @@ TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
     return assign;
   }
 
+  else if(!strcmp(id->stringval, "write")) {
+    // printf("\n\n\nArg Datatype %d\n\n\n",args->datatype);
+    if(args->datatype == STRING) {
+      /* Already Correct */
+    }
+    else if(args->datatype == INTEGER) {
+      strcpy(id->stringval, "writei");
+    }
+
+    else if(args->datatype == REAL) {
+      strcpy(id->stringval, "writef");
+    }
+
+    id->link = args;
+    ret->operands = id;
+    ret->datatype = id->datatype;
+
+  }
+  else if(!strcmp(id->stringval, "writeln")) {
+    // printf("\n\n\nArg Datatype %d\n\n\n",args->datatype);
+    if(args->datatype == STRING) {
+      /* Already Correct */
+    }
+    else if(args->datatype == INTEGER) {
+      strcpy(id->stringval, "writelni");
+    }
+
+    else if(args->datatype == REAL) {
+      strcpy(id->stringval, "writelnf");
+    }
+
+    id->link = args;
+    ret->operands = id;
+    ret->datatype = id->datatype;
+
+  }
+
   else {
     id->link = args;
     ret->operands = id;
