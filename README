@@ -1,8 +1,64 @@
 Name: David Parker
 EID: dp24559
 
+
+Parser ALL Optimizations:
+***************************************************************************************
+1) 	AREF combination optimization:
+
+	If an aref exists that contains a constant is sitting next to another aref that
+	contains only a constant then we can "combine" the aref's into a single aref number
+	by reusing the last aref token and modifying its offset.
+
+	Example:
+	(aref (aref(^ptr)
+		       8)
+		  16)
+
+    Becomes,
+    (aref (^ptr) 24)
+
+2)	Binop return optimization:
+	
+	If binop tokens are just constant numbers, don't create a tree. Just return a single number token that is the result of that binop operation. This works for a 
+	chain of binops as long as all rhs and lhs are constant numbers.
+
+	Example:
+		  *
+		 /
+		+--2
+	   /
+	  5--10
+	  
+	Becomes,
+	30 
+
+3) 	Binop add coalesce optimization:
+
+	If a binop tree has variables and the first optimization cannot run, we can still combine like add operations into a single add.
+
+	Example:
+      +
+	 /  	
+	4--+
+	   /
+	 -12--*
+	 	 /
+	 	i--12
+	 	
+	Becomes, 
+	    +
+	   /
+	 -8--*
+ 	    /
+ 	   i--12
+***************************************************************************************
+	
+
+	
+
 Project 2
-**********************************************************************************************
+***************************************************************************************
 For project 2 we were given a partially completed lex specification,
 some things that weren't working were floating points with e, overflow
 for both ints and floating points, and the rest of the reserved words and

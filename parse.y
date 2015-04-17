@@ -320,29 +320,15 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
         printf("rhs is %s\n", rhs->symentry->namestring);
     }
 
-    // if(lhs->tokentype == OPERATOR && lhs->whichval == AREFOP) {
-    //   // lhs->datatype = getArefType(lhs);
-    //   printf("LHS is aref, %d\n", lhs->datatype);
-    //   printf("RHS is , %d\n", rhs->datatype);
-    // }
-
-    // if(rhs->tokentype == OPERATOR && rhs->whichval == AREFOP) {
-    //   // rhs->datatype = getArefType(rhs);
-    //   printf("RHS is aref\n");
-    // }
-
     if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
       /* Convert the rhs to an int */
       if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
-        printf("LHS is %s\n", lhs->stringval);
         rhs = makeFix(rhs);
         op->datatype = INTEGER;
       }
       /* Convert the rhs to a float */
       else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
-        printf("Assign, rhs = %d\n", rhs->intval);
         rhs = makefloat(rhs);
-        printf("Float?! %d\n", rhs->datatype);
         op->datatype = REAL;
       }
     }
@@ -373,16 +359,6 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
     return op;
   }
 
-int getArefType(TOKEN tok) {
-  while(tok->link != NULL) {
-    tok = tok->link;
-  }
-
-  printf("Aref last type was %d\n", tok->datatype);
-
-  return tok->datatype;
-}
-
 TOKEN makeif(TOKEN tok, TOKEN exp, TOKEN thenpart, TOKEN elsepart)
   {  tok->tokentype = OPERATOR;  /* Make it look like an operator   */
      tok->whichval = IFOP;
@@ -406,7 +382,6 @@ TOKEN findidentifier(TOKEN tok) {
   SYMBOL sym = searchst(tok->stringval);
   if(sym != NULL) {
     if(sym->kind == CONSTSYM) {
-      // printf("Probably not here %s\n\n\n", tok->stringval);
       tok->tokentype = NUMBERTOK;
       tok->datatype = sym->basicdt;
       tok->symentry = sym;
@@ -493,7 +468,6 @@ TOKEN makeconst(TOKEN id, TOKEN value) {
 }
 
 TOKEN makelabel(TOKEN intlist) {
-  // printf("In make label\n");
   while(intlist != NULL) {
     labels[labelnumber++] = intlist->intval;
     TOKEN temp = intlist->link;
@@ -504,6 +478,7 @@ TOKEN makelabel(TOKEN intlist) {
   return intlist;
 }
 
+/* Get a label's internal number from the labels array */
 int getLabelNum(int num) {
   int ret = 0;
   int i;
@@ -516,16 +491,10 @@ int getLabelNum(int num) {
   return ret;
 }
 
-// Type Name:
-//    kind      = TYPESYM
-//    datatype  = pointer to the type structure in the symbol table.
-//    size      = size of data item in addressing units (bytes).
-
 TOKEN maketype(TOKEN id, TOKEN type) {
   SYMBOL typesym;
-  /* This type token is a record */
+  /* This type token is an unamed type */
   if(!strcmp(type->stringval,"")) {
-    // printf("WHY HERE %s, %d\n\n\n", id->stringval, type->symtype->size);
     typesym = type->symtype;
   }
   else {
@@ -546,17 +515,6 @@ TOKEN maketype(TOKEN id, TOKEN type) {
       sym->datatype = typesym;
   }
   sym->basicdt = typesym->basicdt;
-  // SYMBOL sym = inserttype(id->stringval, typesym->size);
-  // printf("Symbol id is %s, Type symbol %s\n\n\n", sym->namestring, typesym->namestring);
-  // sym->datatype = typesym;
-
-  // SYMBOL sym =  makesym(id->stringval);
-  // printf("%s\n", type->stringval);
-  // sym->datatype = searchst(type->stringval);
-  // sym->size = sym->datatype->size;
-
-  // installType(sym, 0);
-  // printf("yup\n");
   return id;
 }
 
@@ -573,44 +531,34 @@ TOKEN makerecord(TOKEN fieldlist) {
     if(last != NULL) last->link = entry;
     last = entry;
     if(top == NULL) top = entry;
-    // printf("Adding %s\n", fieldlist->stringval);
+
+    /* Align entries to a multiple of their size */
     offset += padding(offset, typesym->size);
     entry->offset = offset;
     offset += typesym->size;
-    // printf("Offset: %d\n", entry->offset);
     entry->size = typesym->size;
-    // printf("Size: %d\n", entry->size);
     entry->datatype = typesym;
     entry->basicdt = typesym->basicdt;
-    // printf("TYPE: %s\n\n", entry->datatype->namestring);
-
-    // printf("Type is %s\n", typesym->namestring);
-    // printf("%s\n", fieldlist->stringval);
 
     /* Move to the next token that does not contain the type operand */
     fieldlist = fieldlist->link;
-    // printf("Name is %s\n", fieldlist->stringval);
+
     /* Loop on each same type in the field list */
     while(fieldlist != NULL && fieldlist->operands == NULL) {
       SYMBOL entry = makesym(fieldlist->stringval);
       if(last != NULL) last->link = entry;
       last = entry;
-      // printf("Adding %s\n", fieldlist->stringval);
+
+      /* Align entries to a multiple of their size */
       offset += padding(offset, typesym->size);
       entry->offset = offset;
       offset += typesym->size;
-      // printf("Offset: %d\n", entry->offset);
       entry->size = typesym->size;
-      // printf("Size: %d\n", entry->size);
       entry->datatype = typesym;
       entry->basicdt = typesym->basicdt;
-      // printf("TYPE: %s\n\n", entry->datatype->namestring);
-      // printf("%s\n", fieldlist->stringval);
+
       fieldlist = fieldlist->link;
     }
-    // printf("TOP IS %s\n", top->stringval);
-
-    // fieldlist = fieldlist->link;
   }
 
   /* Add the final padding to align the record to 8 bytes */
@@ -619,11 +567,9 @@ TOKEN makerecord(TOKEN fieldlist) {
     recordsym->link = NULL;
     totalSize = offset + padding(offset, alignsize(recordsym));
 
-    // printf("TOP is %s\n", top->namestring);
+    /* Set the recordsym's datatype to be the top of the record */
     recordsym->datatype = top;
     recordsym->size = totalSize;
-    // printf("Recordsym has pointer: %s, size: %d\n", recordsym->datatype->namestring, recordsym->size);
-    // insertRecordSym(recordsym);
 
     TOKEN ret = talloc();
     ret->symtype = recordsym;
@@ -674,14 +620,14 @@ TOKEN instenum(TOKEN idlist) {
 
     idlist = idlist->link;
     size++;
-    // free(value);
+    free(value);
   }
 
   return makesubrange(0, size - 1);
 }
 
+/* Creates a pointer sym for this token */
 TOKEN instpoint(TOKEN tok, TOKEN typename) {
-  // printf("POINTER\n");
   SYMBOL pointer = symalloc();
   pointer->kind = POINTERSYM;
   pointer->datatype = searchins(typename->stringval);
@@ -721,67 +667,58 @@ SYMBOL multidem(TOKEN simpletypes, TOKEN typetok) {
   return sym;
 }
 
+/* Dereference a pointer and return the ^ as the top */
 TOKEN dopoint(TOKEN var, TOKEN tok) {
   SYMBOL sym = var->symtype;
-  // printf("Token name %s\n", var->stringval);
-  // printf("Type is : %s\n", sym->namestring);
 
   tok = createtok(OPERATOR,POINTEROP);
   tok->operands = var;
 
-  // printf("Kind is %d\n", sym->kind);
   sym = skipTypes(sym);
-
-  /* Sym is a pointersym, move it over one */
-  sym = sym->datatype;
-
-  sym = skipTypes(sym);
-
-  // printf("Kind after is %d\n", sym->kind);
 
   tok->symtype = sym;
-  // printf("Var is %s, Type is %d\n", var->stringval, sym->basicdt);
 
   return tok;
 }
 
+/* Returns an aref for a record dereference */
 TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   SYMBOL record = var->symtype;
+  bool ispointer = false;
+
+  /* Skip to the pointer's RECORDSYM symbol */
+  if(record->kind == POINTERSYM) {
+    record = record->datatype;
+    record = skipTypes(record);
+    ispointer = true;
+  }
   int oldOffset = 0;
   bool reuse = false;
 
   /* OPTIMIZATION : Combine aref's whose offsets are constant numbers */
-  if(var->tokentype == OPERATOR && var->whichval == AREFOP && var->operands->link->tokentype == NUMBERTOK) {
-    // dot = createtok(OPERATOR,AREFOP);
-    printf("SYM KIND %d\n\n\n\n\n", record->kind);
+  if(!ispointer && var->tokentype == OPERATOR && var->whichval == AREFOP && var->operands->link->tokentype == NUMBERTOK) {
     dot = var;
     oldOffset = var->operands->link->intval;
     reuse = true;
   }
 
   else {
+    if(ispointer) printf("Creating aref for pointer %s\n", var->stringval);
     dot = createtok(OPERATOR,AREFOP);
   }
 
-  // printf("Record field  #1 %s, kind %d\n", record->datatype->namestring, record->kind);
   /* Move to the first record entry */
   record = record->datatype;
-  printf("Reduce Dot %s\n", record->namestring);
+  // printf("Reduce Dot %s\n", record->namestring);
 
   while(record != NULL && strcmp(field->stringval, record->namestring)) {
     record = record->link;
   }
-  // record = record->link;
 
-  printf("Record name %s\n", record->namestring);
-
-
-  printf("\n\nField %s, Type %d\n\n", field->stringval, record->basicdt);
   dot->datatype = record->basicdt;
-  // var->datatype = record->basicdt;
   int offset = record->offset + oldOffset;
 
-  if(offset == 0) {
+  if(!ispointer && offset == 0) {
     return var;
   }
 
@@ -789,37 +726,13 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
     dot->operands = var;
   }
 
-  dot->operands->link = constant(offset);//constant(offset);
+  dot->operands->link = constant(offset);
 
   dot->symtype = skipTypes(record->datatype);
-  // dot->symentry = skipTypes(record->datatype);
   return dot;
-
-  printf("Var: %s\n", var->symtype->namestring);
-  if(var->link != NULL) printf("Var: %s\n", var->link->stringval);
-  return dot;
-
-  /* Lookup type of var (must be a record or an array) */
-  // SYMBOL sym = searchst(var->stringval);
-  // SYMBOL record = sym->datatype->datatype->datatype->datatype->datatype;
-
-  // while(record != NULL && strcmp(field->stringval, record->namestring)) {
-  //   record = record->link;
-  // }
-
-  // record = record->link;
-
-
-  // printf("\nName is %s\n\n", record->namestring);
-  // // SYMBOL sym = searchst(field->stringval);
-  // int offset = record->offset;
-
-  // dot->operands = constant(offset);
-  // dot->symtype = record;
-  // return dot;
 }
 
-
+/* Returns an aref for an array dereference */
 TOKEN arrayref(TOKEN arr, TOKEN tok, TOKEN subs, TOKEN tokb) {
   int index = 0;
   int offset = 0;
@@ -827,43 +740,28 @@ TOKEN arrayref(TOKEN arr, TOKEN tok, TOKEN subs, TOKEN tokb) {
   TOKEN offsetTok = NULL;
   TOKEN last = NULL;
 
+  /* Go through all the dimensions of the array */
   while(subs != NULL) {
     TOKEN link = subs->link;
-    printf("Token type: %d, name %s, OffsetTok %p\n", subs->tokentype, subs->stringval, offsetTok);
-    // if(subs->tokentype == NUMBERTOK) {
-    //   index = subs->intval;
-    //   // index = (array->highbound - array->lowbound - 1) + subs->intval;
-    //   offset += (index - array->lowbound) * array->datatype->size;
-    //   offsetTok->tokentype = NUMBERTOK;
-    //   offsetTok->intval = offset;
-    // }
-    if(false);
-    /* Non-constant expression */
-    else {
-      int size = array->datatype->size;
-      TOKEN mul = binop(createtok(OPERATOR,TIMESOP), constant(size), subs);
-      TOKEN add = binop(createtok(OPERATOR,PLUSOP), constant(-size * array->lowbound), mul);
-      if(offsetTok != NULL) {
-        TOKEN addlast = binop(createtok(OPERATOR,PLUSOP), offsetTok, add);
-        offsetTok = addlast;
-      }
+    int size = array->datatype->size;
 
-      else {
-        offsetTok = add;
-      }
+    /* Creates a binop for every operation, which has been optimized to reduce constants
+       to a single number instead of returning the op as the root */
+    TOKEN mul = binop(createtok(OPERATOR,TIMESOP), constant(size), subs);
+    TOKEN add = binop(createtok(OPERATOR,PLUSOP), constant(-size * array->lowbound), mul);
+
+    if(offsetTok != NULL) {
+      TOKEN addlast = binop(createtok(OPERATOR,PLUSOP), offsetTok, add);
+      offsetTok = addlast;
     }
 
+    else {
+      offsetTok = add;
+    }
     /* Move to the next array */
-    printf("Array Size: %d\n", array->size);
     array = array->datatype;
-    // array = skipTypes(array);ma
-
-    // printf("Index = %d Offset = %d\n", subs->intval, offset);
     subs = link;
   }
-
-  printf("Should be record  %s\n", array->namestring);
-
 
   TOKEN ret = createtok(OPERATOR,AREFOP);
   array = skipTypes(array);
@@ -871,68 +769,24 @@ TOKEN arrayref(TOKEN arr, TOKEN tok, TOKEN subs, TOKEN tokb) {
   ret->operands->link = offsetTok;
   ret->symtype = array;
 
-  printf("HEY\n");
   return ret;
-  tok = talloc();
-  tok->operands = arr;
-  tok->operands->symtype = array;
-
-  /* Increment the offsets */
-  // if(array->kind == RECORDSYM) {
-  //   /* Move to the first entry */
-  //   array = array->datatype;
-  //   while(array != NULL) {
-  //   printf("Type!! %s\n", array->namestring);
-  //     array->offset += offset;
-  //     array = array->link;
-  //   }
-  // }
-
-  // else {
-  //   array->offset += offset;
-  // }
-
-
-  return tok;
-  // tok->operands = arr;
-  // // tok->link = constant(5);
-  // tok->operands->link = constant(2);
-  // array = skipTypes(array);
-  // array->offset = constant(50);
-
-  // tok->operands->symtype = array;
-  // // tok->symentry = array;
-  // // dot->operands = var;
-  // // dot->operands->link = constant(offset);//constant(offset);
-  // // dot->symtype = skipTypes(record->datatype);
-
-  // printf("Array for %s, with size %d\n", arr->stringval, arr->symtype->size);
-  // return tok;
 }
 
 TOKEN makefloat(TOKEN tok) {
-  // printf("Making float for %s\n\n", tok->stringval);
   SYMBOL sym = searchst(tok->stringval);
-  TOKEN cast = talloc();// maketoken(OPERATOR, FLOATOP);// talloc();
+  TOKEN cast = talloc();
 
   /* Couldn't find a symobl by it's name, probably a constant */
   if(sym == NULL && tok->symentry != NULL) {
-    // printf("Searching %s\n", tok->symentry->namestring);
     sym = searchst(tok->symentry->namestring);
   }
 
-  // TODO look into this
   if(sym == NULL || sym->kind == CONSTSYM) {
     cast->tokentype = NUMBERTOK;
     cast->datatype = REAL;
     cast->realval = (float)tok->intval;
     return cast;
   } 
-
-
-  // if(sym->kind == CONSTSYM) {
-  //   // printf("Casting const %s\n", tok->symentry->namestring);
-  // }
 
   else if(sym->kind == VARSYM) {
     cast->tokentype = OPERATOR;
@@ -979,7 +833,6 @@ TOKEN findlabel(TOKEN number, TOKEN statement) {
 }
 
 TOKEN findtype(TOKEN tok) {
-  // printf("Tok = %s\n", tok->stringval);
   if(tok->tokentype != IDENTIFIERTOK) printf("Identifier expected, type()\n");
   SYMBOL sym = searchst(tok->stringval);
   if(sym == NULL) printf("Type not found in symbol table, type()\n");
@@ -1128,7 +981,6 @@ TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
 
     /* Argname -> Pointer Type -> Namlesspointer -> Object pointed to -> size */
     TOKEN size = constant(sym->datatype->datatype->datatype->size);
-    // printf("Sym type is %s, Size = %d\n", symptr->datatype->datatype->namestring, size->intval);
 
     id->link = size;
     ret->operands = id;
@@ -1140,7 +992,6 @@ TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
   }
 
   else if(!strcmp(id->stringval, "write")) {
-    // printf("\n\n\nArg Datatype %d\n\n\n",args->datatype);
     if(args->datatype == STRING) {
       /* Already Correct */
     }
@@ -1158,7 +1009,6 @@ TOKEN function(TOKEN id, TOKEN smash, TOKEN args) {
 
   }
   else if(!strcmp(id->stringval, "writeln")) {
-    // printf("\n\n\nArg Datatype %d\n\n\n",args->datatype);
     if(args->datatype == STRING) {
       /* Already Correct */
     }
