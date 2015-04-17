@@ -168,7 +168,7 @@ TOKEN parseresult;
              ;
   assignment :  variable ASSIGN expr         { $$ = binop($2, $1, $3); }
              ;
-  expressions: expr COMMA expressions {$$ = cons($1, $2); }
+  expressions: expr COMMA expressions {$$ = cons($1, $3); }
              | expr
              ;
   expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
@@ -272,6 +272,43 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
   { 
     if(EXIT) printf("ENTERING binop\n");
 
+    /* OPTIMIZATION : If binop tokens are just constant numbers, don't create a tree */
+    if((lhs->tokentype == NUMBERTOK && lhs->datatype == INTEGER) && (rhs->tokentype == NUMBERTOK && rhs->datatype == INTEGER)) {
+      if(op->whichval == PLUSOP) return constant(lhs->intval + rhs->intval);
+      else if(op->whichval == MINUSOP) return constant(lhs->intval - rhs->intval);
+      else if(op->whichval == TIMESOP) return constant(lhs->intval * rhs->intval);
+      else if(op->whichval == DIVIDEOP && rhs->intval != 0) return constant(lhs->intval / rhs->intval);
+    }
+
+    /* OPTIMIZATION : Coalesce children's add operations */
+    else if((lhs->tokentype == NUMBERTOK && lhs->datatype == INTEGER || rhs->tokentype == NUMBERTOK && rhs->datatype == INTEGER) && (op->whichval == PLUSOP /*|| op->whichval == MINUSOP*/)) {
+      int ourVal;
+      TOKEN other, otherSide,otherlhs,otherrhs,otherop;
+      if(lhs->tokentype == NUMBERTOK && lhs->datatype == INTEGER) {
+        ourVal = lhs->intval;
+        other = rhs;
+      } 
+      else{
+        ourVal = rhs->intval;
+        other = lhs;
+      } 
+
+      if(other->tokentype == OPERATOR) {
+        otherlhs = other->operands;
+        otherrhs = other->operands->link;
+        otherop = other;
+
+        if((otherlhs->tokentype == NUMBERTOK && otherlhs->datatype == INTEGER || otherrhs->tokentype == NUMBERTOK && otherrhs->datatype == INTEGER) && (otherop->whichval == PLUSOP /*|| other->op->whichval == MINUSOP*/)) {
+          if(otherlhs->tokentype == NUMBERTOK && otherlhs->datatype == INTEGER)
+            otherSide = otherlhs;
+          else
+            otherSide = otherrhs;
+          otherSide->intval += ourVal;
+          return other;
+        }
+      }
+    }
+
     if(rhs->tokentype == NUMBERTOK) {
       if(rhs->symentry != NULL)
         printf("rhs is %s\n", rhs->symentry->namestring);
@@ -363,6 +400,7 @@ TOKEN findidentifier(TOKEN tok) {
   SYMBOL sym = searchst(tok->stringval);
   if(sym != NULL) {
     if(sym->kind == CONSTSYM) {
+      // printf("Probably not here %s\n\n\n", tok->stringval);
       tok->tokentype = NUMBERTOK;
       tok->datatype = sym->basicdt;
       tok->symentry = sym;
@@ -434,12 +472,15 @@ TOKEN makeconst(TOKEN id, TOKEN value) {
 
   if(sym->basicdt == INTEGER) {
     sym->constval.intnum = value->intval;
+    id->tokentype = NUMBERTOK;
   }
   else if(sym->basicdt == REAL) {
     sym->constval.realnum = value->realval;
+    id->tokentype = NUMBERTOK;
   }
   else if(sym->basicdt == STRING) {
     strcpy(sym->constval.stringconst, value->stringval);
+    id->tokentype = STRINGTOK;
   }
 
   return id;
@@ -584,6 +625,7 @@ TOKEN makesubrange(int low, int high) {
 
   TOKEN tok = talloc();
   tok->symtype = subrange;
+  tok->tokentype = NUMBERTOK;
 
   return tok;
 }
@@ -673,8 +715,10 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   int oldOffset = 0;
   bool reuse = false;
 
+  /* OPTIMIZATION : Combine aref's whose offsets are constant numbers */
   if(var->tokentype == OPERATOR && var->whichval == AREFOP && var->operands->link->tokentype == NUMBERTOK) {
     // dot = createtok(OPERATOR,AREFOP);
+    printf("SYM KIND %d\n\n\n\n\n", record->kind);
     dot = var;
     oldOffset = var->operands->link->intval;
     reuse = true;
@@ -702,10 +746,14 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   // var->datatype = record->basicdt;
   int offset = record->offset + oldOffset;
 
+  if(offset == 0) {
+    return var;
+  }
+
   if(!reuse) {
     dot->operands = var;
   }
-  
+
   dot->operands->link = constant(offset);//constant(offset);
 
   dot->symtype = skipTypes(record->datatype);
@@ -736,30 +784,59 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   // return dot;
 }
 
+
 TOKEN arrayref(TOKEN arr, TOKEN tok, TOKEN subs, TOKEN tokb) {
   int index = 0;
   int offset = 0;
   SYMBOL array = arr->symtype;
+  TOKEN offsetTok = NULL;
+  TOKEN last = NULL;
 
   while(subs != NULL) {
-    index = subs->intval;
-    // index = (array->highbound - array->lowbound - 1) + subs->intval;
-    offset = (index - array->lowbound) * array->datatype->size;
+    TOKEN link = subs->link;
+    printf("Token type: %d, name %s, OffsetTok %p\n", subs->tokentype, subs->stringval, offsetTok);
+    // if(subs->tokentype == NUMBERTOK) {
+    //   index = subs->intval;
+    //   // index = (array->highbound - array->lowbound - 1) + subs->intval;
+    //   offset += (index - array->lowbound) * array->datatype->size;
+    //   offsetTok->tokentype = NUMBERTOK;
+    //   offsetTok->intval = offset;
+    // }
+    if(false);
+    /* Non-constant expression */
+    else {
+      int size = array->datatype->size;
+      TOKEN mul = binop(createtok(OPERATOR,TIMESOP), constant(size), subs);
+      TOKEN add = binop(createtok(OPERATOR,PLUSOP), constant(-size * array->lowbound), mul);
+      if(offsetTok != NULL) {
+        TOKEN addlast = binop(createtok(OPERATOR,PLUSOP), offsetTok, add);
+        offsetTok = addlast;
+      }
+
+      else {
+        offsetTok = add;
+      }
+    }
 
     /* Move to the next array */
+    printf("Array Size: %d\n", array->size);
     array = array->datatype;
-    // array = skipTypes(array);
+    // array = skipTypes(array);ma
 
     // printf("Index = %d Offset = %d\n", subs->intval, offset);
-    subs = subs->link;
+    subs = link;
   }
+
+  printf("Should be record  %s\n", array->namestring);
+
 
   TOKEN ret = createtok(OPERATOR,AREFOP);
   array = skipTypes(array);
   ret->operands = arr;
-  ret->operands->link = constant(offset);
+  ret->operands->link = offsetTok;
   ret->symtype = array;
 
+  printf("HEY\n");
   return ret;
   tok = talloc();
   tok->operands = arr;
@@ -782,20 +859,20 @@ TOKEN arrayref(TOKEN arr, TOKEN tok, TOKEN subs, TOKEN tokb) {
 
 
   return tok;
-  tok->operands = arr;
-  // tok->link = constant(5);
-  tok->operands->link = constant(2);
-  array = skipTypes(array);
-  array->offset = constant(50);
+  // tok->operands = arr;
+  // // tok->link = constant(5);
+  // tok->operands->link = constant(2);
+  // array = skipTypes(array);
+  // array->offset = constant(50);
 
-  tok->operands->symtype = array;
-  // tok->symentry = array;
-  // dot->operands = var;
-  // dot->operands->link = constant(offset);//constant(offset);
-  // dot->symtype = skipTypes(record->datatype);
+  // tok->operands->symtype = array;
+  // // tok->symentry = array;
+  // // dot->operands = var;
+  // // dot->operands->link = constant(offset);//constant(offset);
+  // // dot->symtype = skipTypes(record->datatype);
 
-  printf("Array for %s, with size %d\n", arr->stringval, arr->symtype->size);
-  return tok;
+  // printf("Array for %s, with size %d\n", arr->stringval, arr->symtype->size);
+  // return tok;
 }
 
 TOKEN makefloat(TOKEN tok) {

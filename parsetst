@@ -59,5 +59,6 @@ begin
    fred^.age := 20;
    fred^.friend := nil;
    john^.friend^.friend^.location.im := 4.5;
-   ac[7].re := 8.0
+   people[i].age := ptr^.age;
+   aco[i,white] := john^.favorite
 end.
