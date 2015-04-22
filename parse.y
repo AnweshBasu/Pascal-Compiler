@@ -315,11 +315,6 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
       }
     }
 
-    if(rhs->tokentype == NUMBERTOK) {
-      if(rhs->symentry != NULL)
-        printf("rhs is %s\n", rhs->symentry->namestring);
-    }
-
     if(op->tokentype == OPERATOR && op->whichval == ASSIGNOP) {
       /* Convert the rhs to an int */
       if(lhs->datatype == INTEGER && rhs->datatype == REAL) {
@@ -400,7 +395,6 @@ TOKEN findidentifier(TOKEN tok) {
     }
 
     else if (sym->kind == VARSYM) {
-      printf("Found %s\n", sym->datatype->namestring);
       tok->tokentype = IDENTIFIERTOK;
       tok->datatype = sym->basicdt;
       tok->symentry = skipTypes(sym->datatype);
@@ -509,7 +503,7 @@ TOKEN maketype(TOKEN id, TOKEN type) {
   }
 
   else {
-    printf("Already Declared, %s Type sym size: %d\n", id->stringval, typesym->size);
+    // printf("Already Declared, %s Type sym size: %d\n", id->stringval, typesym->size);
       sym->kind = TYPESYM;
       sym->size = typesym->size;
       sym->datatype = typesym;
@@ -703,7 +697,6 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   }
 
   else {
-    if(ispointer) printf("Creating aref for pointer %s\n", var->stringval);
     dot = createtok(OPERATOR,AREFOP);
   }
 
