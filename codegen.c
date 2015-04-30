@@ -130,40 +130,41 @@ int genarith(TOKEN code) {
   return reg;
 }
 
-
 /* Generate code for a Statement from an intermediate-code form */
-void genc(TOKEN code)
-  {  TOKEN tok, lhs, rhs;
-     int reg, offs;
-     SYMBOL sym;
-     if (DEBUGGEN)
-       { printf("genc\n");
-	 dbugprinttok(code);
+void genc(TOKEN code) {  
+ TOKEN tok, lhs, rhs;
+ int reg, offs;
+ SYMBOL sym;
+ if(DEBUGGEN) { 
+   printf("genc\n");
+   dbugprinttok(code);
+ };
+ if(code->tokentype != OPERATOR) { 
+   printf("Bad code token");
+         dbugprinttok(code);
        };
-     if ( code->tokentype != OPERATOR )
-        { printf("Bad code token");
-	  dbugprinttok(code);
-	};
-     switch ( code->whichval )
-       { case PROGNOP:
-	   tok = code->operands;
-	   while ( tok != NULL )
-	     {  genc(tok);
-		tok = tok->link;
-	      };
-	   break;
-	 case ASSIGNOP:                   /* Trivial version: handles I := e */
-	   lhs = code->operands;
-	   rhs = lhs->link;
-	   reg = genarith(rhs);              /* generate rhs into a register */
-	   sym = lhs->symentry;              /* assumes lhs is a simple var  */
-	   offs = sym->offset - stkframesize; /* net offset of the var   */
-           switch (code->datatype)            /* store value into lhs  */
-             { case INTEGER:
-                 asmst(MOVL, reg, offs, lhs->stringval);
-                 break;
-                 /* ...  */
-             };
-           break;
-	 };
-  }
+ switch ( code->whichval ) { 
+
+   case PROGNOP:
+     tok = code->operands;
+     while ( tok != NULL ) {  
+       genc(tok);
+       tok = tok->link;
+     };
+     break;
+
+   case ASSIGNOP:                   /* Trivial version: handles I := e */
+     lhs = code->operands;
+     rhs = lhs->link;
+     reg = genarith(rhs);              /* generate rhs into a register */
+     sym = lhs->symentry;              /* assumes lhs is a simple var  */
+     offs = sym->offset - stkframesize; /* net offset of the var   */
+     switch (code->datatype) {          /* store value into lhs  */
+       case INTEGER:
+         asmst(MOVL, reg, offs, lhs->stringval);
+         break;
+         /* ...  */
+     };
+     break;
+ };
+}
