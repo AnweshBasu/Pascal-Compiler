@@ -1,12 +1,9 @@
-/* genasm.c       Generate Assembly Code for X86    ; 15 May 14   */
+/* genasm.c       Generate Assembly Code for X86    ; 17 Apr 15   */
 
-/* Copyright (c) 2013 Gordon S. Novak Jr. and The University of Texas at Austin
+/* Copyright (c) 2015 Gordon S. Novak Jr. and The University of Texas at Austin
     */
 
-/* ***** expand register tables for 16 integer registers, r8 - r15   */
-
 /* Routines for use with CS 375 Code Generation assignment for X86. */
-/* Also fix FBASE and FMAX in genasm.h.   */
 
 /* We assume Linux assembly language conventions.   */
 
@@ -32,7 +29,7 @@
    06 Jul 12; 10 Jul 12; 16 Jul 12; 18 Jul 12; 23 Jul 12; 24 Jul 12;
    26 Jul 12; 31 Jul 12; 01 Aug 12; 03 Aug 12; 06 Aug 12; 07 Aug 12;
    08 Aug 12; 10 Aug 12; 13 Aug 12; 14 May 13; 09 Jul 13; 25 Apr 14
-   02 May 14
+   02 May 14; 15 May 14
   */
 
 #include <stdio.h>
@@ -92,22 +89,22 @@ char* topcode[] = {
 
 char* topcodeb[] = {
   ".LFB0:",
-  "	.cfi_startproc",
-  "	pushq	%rbp              # save base pointer on stack",
-  "	.cfi_def_cfa_offset 16",
-  "	movq	%rsp, %rbp        # move stack pointer to base pointer",
-  "	.cfi_offset 6, -16",
-  "	.cfi_def_cfa_register 6",
+  " .cfi_startproc",
+  " pushq %rbp              # save base pointer on stack",
+  " .cfi_def_cfa_offset 16",
+  " movq  %rsp, %rbp        # move stack pointer to base pointer",
+  " .cfi_offset 6, -16",
+  " .cfi_def_cfa_register 6",
   ""};
 
 char* topcodec[] = {
-  "	movq	%rbx, %r9        # save %rbx (callee-saved) in %r9",
+  " movq  %rbx, %r9        # save %rbx (callee-saved) in %r9",
   "# ------------------------- begin Your code -----------------------------",
   ""};
 
 char* bottomcode[] = { 
   "# ----------------------- begin Epilogue code ---------------------------",
-  "	movq	%r9, %rbx        # restore %rbx (callee-saved) from %r9",
+  " movq  %r9, %rbx        # restore %rbx (callee-saved) from %r9",
   "        leave",
   "        ret",
   "        .cfi_endproc",
@@ -120,18 +117,18 @@ char* bottomcodeb[] = {
   ""};
 
 char* bottomcodec[] = { 
-  "        .ident  \"CS 375 Compiler - Summer 2014\"",
+  "        .ident  \"CS 375 Compiler - Spring 2015\"",
   /* "        .section     .note.GNU-stack,\"\",@progbits", /* need this? */
   ""};
 
 /* constant needed for floating negation */
 char* fnegconst[] = {
-  "	.align 16",
+  " .align 16",
   ".LC666:                    # constant for floating negation",
-  "	.long	0",
-  "	.long	-2147483648",
-  "	.long	0",
-  "	.long	0",
+  " .long 0",
+  " .long -2147483648",
+  " .long 0",
+  " .long 0",
   ""};
 
 /* Tables of literal constants */
@@ -448,9 +445,9 @@ void outlits()
          idb = righth(d);
          printf("\t.align  8\n");
          printf(".LC%d:\n", flabels[i]);
-	 if ( ida == 0 && idb != 0)
+   if ( ida == 0 && idb != 0)
            { printf(";***** WARNING: following constant is probably wrong.\n");
-	     printf("; See comments about Linux in genasm.c\n"); };
+       printf("; See comments about Linux in genasm.c\n"); };
          printf("\t.long\t%d   \t#  %f\n", idb, fliterals[i]);
          printf("\t.long\t%d\n", ida);
        };

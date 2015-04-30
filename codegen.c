@@ -23,12 +23,16 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
+#include <stdbool.h>
 #include "token.h"
 #include "symtab.h"
 #include "genasm.h"
 #include "codegen.h"
 
 void genc(TOKEN code);
+/* RMIN -> RMAX (int  regs) FMIN -> FMAX (float registers) */
+bool registers[FMAX + 1];
 
 /* Set DEBUGGEN to 1 for debug printouts of code generation */
 #define DEBUGGEN 0
@@ -63,40 +67,68 @@ void gencode(TOKEN pcode, int varsize, int maxlabel)
 int getreg(int kind)
   {
     /*     ***** fix this *****   */
-     return RBASE;
+
+      /* Find if we need 32 bit or 64 bit register */
+      /* Find first available register mark it used and return index */
+      /* WORD is defined to be KIND 3 (32 bit, not sure)*/
+    int i;
+    if(kind == BYTE || kind == HALFWORD || kind == WORD) {
+      for(i = RBASE; i < RMAX; i++) {
+        if(registers[i] == false) {
+          registers[i] = true;
+          return i;
+        }
+      }
+      goto fail;
+    }
+    else if(kind == FLOAT || kind == ADDR) {
+      for(i = FBASE; i < FMAX; i++) {
+        if(registers[i] == false) {
+          registers[i] = true;
+          return i;
+        }
+      }
+      goto fail;
+    }
+    else {
+      assert(false && "Oops! Wrong kind passed in, exiting program.");
+    }
+    fail:
+      assert(false && "Oops! Out of registers, exiting program.");
   }
 
 /* Trivial version */
 /* Generate code for arithmetic expression, return a register number */
-int genarith(TOKEN code)
-  {   int num, reg;
-     if (DEBUGGEN)
-       { printf("genarith\n");
-	 dbugprinttok(code);
-       };
-      switch ( code->tokentype )
-       { case NUMBERTOK:
-           switch (code->datatype)
-             { case INTEGER:
-		 num = code->intval;
-		 reg = getreg(WORD);
-		 if ( num >= MINIMMEDIATE && num <= MAXIMMEDIATE )
-		   asmimmed(MOVL, num, reg);
-		 break;
-	       case REAL:
+int genarith(TOKEN code) {   
+  int num, reg;
+  if (DEBUGGEN) { 
+    printf("genarith\n");
+    dbugprinttok(code);
+  };
+
+  switch (code->tokentype) {
+    case NUMBERTOK:
+      switch (code->datatype) {
+        case INTEGER:
+          num = code->intval;
+          reg = getreg(WORD);
+          if (num >= MINIMMEDIATE && num <= MAXIMMEDIATE)
+            asmimmed(MOVL, num, reg);
+          break;
+        case REAL:
+          /*     ***** fix this *****   */
+          break;
+      }
+      break;
+    case IDENTIFIERTOK:
     /*     ***** fix this *****   */
-		 break;
-	       }
-	   break;
-       case IDENTIFIERTOK:
+      break;
+    case OPERATOR:
     /*     ***** fix this *****   */
-	   break;
-       case OPERATOR:
-    /*     ***** fix this *****   */
-	   break;
-       };
-     return reg;
-    }
+      break;
+  };
+  return reg;
+}
 
 
 /* Generate code for a Statement from an intermediate-code form */

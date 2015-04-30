@@ -1,6 +1,6 @@
-/* genasm.h         Header for X86 code generation     ; 15 May 14    */
+/* genasm.h         Header for X86 code generation     ; 29 Apr 15    */
 
-/* Copyright (c) 2013 Gordon S. Novak Jr. and The University of Texas at Austin
+/* Copyright (c) 2015 Gordon S. Novak Jr. and The University of Texas at Austin
     */
 
 /* 
@@ -22,7 +22,7 @@
 
 /* Define register constants */
 
-/* Registers are numbered 0-7 for integer registers, 8-23 for floating */
+/* Registers are numbered 0-15 for integer registers, 16-31 for floating */
 #define RBASE 0         /* First local register to use = %eax */
 #define RMAX  3         /* Last  local register to use */
 #define FBASE 16        /* First F register to use = %xmm0 */
