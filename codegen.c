@@ -95,8 +95,8 @@ int getreg(int kind)
   }
 
 void freeReg(int reg) {
-  if(registers[reg]) {
-    fprintf(stderr, "Trying to free an already free'd register.");
+  if(!registers[reg]) {
+    fprintf(stderr, "Trying to free an already free'd register. %s register #%d", ((reg <= RMAX) ? "INT" : "FP"), reg);
     assert(registers[reg]);
   }
 
@@ -107,6 +107,7 @@ void freeReg(int reg) {
 /* Generate code for arithmetic expression, return a register number */
 int genarith(TOKEN code) {   
   int num, reg,reg2;
+  double fnum;
   TOKEN lhs,rhs;
   if (DEBUGGEN) { 
     printf("genarith\n");
@@ -123,6 +124,13 @@ int genarith(TOKEN code) {
             asmimmed(MOVL, num, reg);
           break;
         case REAL:
+           fnum = code->realval;
+           reg = getreg(REAL);
+           // if (fnum >= MINIMMEDIATE && fnum <= MAXIMMEDIATE)
+           makeflit(fnum,nextlabel);
+           asmldflit(MOVSD, nextlabel++, reg);
+          // exit(-1);
+            // asmimmed(MOVSD, fnum, reg);
           /*     ***** fix this *****   */
           break;
       }
@@ -132,10 +140,14 @@ int genarith(TOKEN code) {
       SYMBOL sym = searchst(code->stringval);
       int offset = sym->offset - stkframesize;
       switch (code->datatype) {          /* store value into lhs  */
-       case INTEGER:
-         reg = getreg(INTEGER);
-         asmld(MOVL, offset, reg, sym->namestring);
-         break;
+        case INTEGER:
+          reg = getreg(INTEGER);
+          asmld(MOVL, offset, reg, sym->namestring);
+          break;
+        case REAL:
+          reg = getreg(REAL);
+          asmld(MOVSD, offset, reg, sym->namestring);
+          break;
          /* ...  */
      };
     }
@@ -195,10 +207,13 @@ void genc(TOKEN code) {
      sym = lhs->symentry;              /* assumes lhs is a simple var  */
      offs = sym->offset - stkframesize; /* net offset of the var   */
      fprintf(stderr,"Offs is %d\n", offs);
-     switch (code->datatype) {          /* store value into lhs  */
-       case INTEGER:
-         asmst(MOVL, reg, offs, lhs->stringval);
-         break;
+     switch (lhs->datatype) {          /* store value into lhs  */
+        case INTEGER:
+          asmst(MOVL, reg, offs, lhs->stringval);
+          break;
+        case REAL:
+          asmst(MOVSD, reg, offs, lhs->stringval);
+          break;
          /* ...  */
      };
      /* HERE */
@@ -240,6 +255,13 @@ void genc(TOKEN code) {
       /* Call genarith for our arguments */
       tok = code->operands->link;
       reg = genarith(tok);
+
+      switch(tok->datatype) {
+        case INTEGER:
+          asmrr(MOVL, reg, EDI);
+          break;
+      }
+
       freeReg(reg);
 
       asmcall(code->operands->stringval);

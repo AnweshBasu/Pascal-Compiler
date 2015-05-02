@@ -1,11 +1,13 @@
 (* trivb.pas *)
 program graph1(output);
 var i,lim : integer;
+    foo : real;
 begin
    lim := 7;
+   foo := 3.14;
    for i := 0 to lim do
       {writeln((('*' + 'abcde')*5),12345,identiferman,stress,(A + B)*C,test)}
-      writeln('*')
+      writeln(i)
 end.
 
 (* graph1.pas *)
