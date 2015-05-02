@@ -1,11 +1,12 @@
 (* trivb.pas *)
-{program graph1(output);
+program graph1(output);
 var i,lim : integer;
 begin
    lim := 7;
    for i := 0 to lim do
-      writeln((('*' + 'abcde')*5),12345,identiferman,stress,(A + B)*C,test)
-end.}
+      {writeln((('*' + 'abcde')*5),12345,identiferman,stress,(A + B)*C,test)}
+      writeln('*')
+end.
 
 (* graph1.pas *)
 {program graph1(output);
@@ -28,7 +29,7 @@ begin
    end
 end.}
 
-program graph1(output);
+{program graph1(output);
 label 1492, 1776;
 type complex = record re, im: real end;
      color = (red, white, blue);
@@ -78,4 +79,4 @@ begin
    write('Fred loc im = ');
    writeln(fred^.location.im);
    if sum < 3 then goto 1776
-end.
+end.}

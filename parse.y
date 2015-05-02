@@ -105,7 +105,7 @@ TOKEN parseresult;
   args       :  expr COMMA args {$$ = cons($1, $3);}
              |  expr {$$ = $1;}
              ;
-  varid      :  IDENTIFIER {$$ = varid($1);}
+  varid      :  identifier {$$ = $1;}
              ;
   Lblock     :  LABEL labelblock Cblock {$$ = $3;}
              |  Cblock
@@ -201,33 +201,6 @@ TOKEN parseresult;
              | variable POINT { $$ = dopoint($1,$2); }
              | variable LBRACKET expressions RBRACKET {$$ = arrayref($1,$2,$3,$4);}
              ;
-  // deref      : deref POINT  defre{$$ = $1;}
-  //            | POINT
-  //            ; 
-  // deref      : DPOINTER
-  //            | DDOT
-  //            | IDENTIFIER {$$ = findidentifier($1);}
-  //            ;
-  // DPOINTER   : IDENTIFIER POINT deref {$$ = cons(dopoint($1,$2),$3);}
-  //            ;
-  // DDOT       : deref DOT IDENTIFIER {$$ = cons($1,reducedot($1,$2,$3)); }
-             //;
-
-
-
-
-
-
-
-
-
-
-  // deref      : IDENTIFIER POINT DOT deref {$$ = cons(dopoint($1, $2),$4);}
-  //            | IDENTIFIER POINT DOT {$$ = dopoint($1, $2);}
-  //            | IDENTIFIER DOT IDENTIFIER deref{$$ = cons(reducedot($1, $2, $3),$4); }
-  //            | IDENTIFIER DOT IDENTIFIER {$$ = reducedot($1, $2, $3); }
-  //            | IDENTIFIER {$$ = findidentifier($1);}
-  //            ;
 
 %%
 
@@ -246,7 +219,7 @@ TOKEN parseresult;
 #define DB_PARSERES  16             /* bit to trace parseresult */
 #define EXIT 0
 
- int labelnumber = 0;  /* sequential counter for internal label numbers */
+int labelnumber = 0;  /* sequential counter for internal label numbers */
 
    /*  Note: you should add to the above values and insert debugging
        printouts in your routines similar to those that are shown here.     */
@@ -397,8 +370,8 @@ TOKEN findidentifier(TOKEN tok) {
     else if (sym->kind == VARSYM) {
       tok->tokentype = IDENTIFIERTOK;
       tok->datatype = sym->basicdt;
-      tok->symentry = skipTypes(sym->datatype);
-      tok->symtype = tok->symentry;
+      tok->symentry = sym;//->datatype;//skipTypes(sym->datatype);
+      tok->symtype = skipTypes(tok->symentry->datatype);
 
        if(EXIT) printf("LEAVING findidentifier\n");
       return tok;
@@ -434,6 +407,9 @@ TOKEN makeprogn(TOKEN tok, TOKEN statements)
 TOKEN makevars(TOKEN list, TOKEN type) {
   SYMBOL symtype = type->symtype;
   instvars(list, type);
+  type->tokentype = IDENTIFIERTOK;
+
+  // type->symentry = symtype;
 
   if(EXIT) printf("LEAVING MAKEVARS\n");
   return type;
@@ -884,7 +860,7 @@ TOKEN opsconsend(TOKEN list, TOKEN value) {
 
 TOKEN varid(TOKEN id) {
   /* Check if this variable is in the symbol table */
-  return getid(id);
+  return findidentifier(id);
 }
 
 TOKEN forloop(TOKEN fortok, TOKEN varid, TOKEN assign, TOKEN assign_expression, TOKEN smash, TOKEN to_expression, TOKEN statement) {

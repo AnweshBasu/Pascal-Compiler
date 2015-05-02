@@ -66,13 +66,10 @@ void gencode(TOKEN pcode, int varsize, int maxlabel)
 /* Need a type parameter or two versions for INTEGER or REAL */
 int getreg(int kind)
   {
-    /*     ***** fix this *****   */
-
       /* Find if we need 32 bit or 64 bit register */
       /* Find first available register mark it used and return index */
-      /* WORD is defined to be KIND 3 (32 bit, not sure)*/
     int i;
-    if(kind == BYTE || kind == HALFWORD || kind == WORD) {
+    if(kind == INTEGER || kind == BOOLETYPE) {
       for(i = RBASE; i < RMAX; i++) {
         if(registers[i] == false) {
           registers[i] = true;
@@ -81,7 +78,7 @@ int getreg(int kind)
       }
       goto fail;
     }
-    else if(kind == FLOAT || kind == ADDR) {
+    else if(kind == REAL || kind == STRINGTYPE || kind == POINTER) {
       for(i = FBASE; i < FMAX; i++) {
         if(registers[i] == false) {
           registers[i] = true;
@@ -97,10 +94,20 @@ int getreg(int kind)
       assert(false && "Oops! Out of registers, exiting program.");
   }
 
+void freeReg(int reg) {
+  if(registers[reg]) {
+    fprintf(stderr, "Trying to free an already free'd register.");
+    assert(registers[reg]);
+  }
+
+  registers[reg] = false;
+}
+
 /* Trivial version */
 /* Generate code for arithmetic expression, return a register number */
 int genarith(TOKEN code) {   
-  int num, reg;
+  int num, reg,reg2;
+  TOKEN lhs,rhs;
   if (DEBUGGEN) { 
     printf("genarith\n");
     dbugprinttok(code);
@@ -111,7 +118,7 @@ int genarith(TOKEN code) {
       switch (code->datatype) {
         case INTEGER:
           num = code->intval;
-          reg = getreg(WORD);
+          reg = getreg(INTEGER);
           if (num >= MINIMMEDIATE && num <= MAXIMMEDIATE)
             asmimmed(MOVL, num, reg);
           break;
@@ -121,10 +128,37 @@ int genarith(TOKEN code) {
       }
       break;
     case IDENTIFIERTOK:
+    {
+      SYMBOL sym = searchst(code->stringval);
+      int offset = sym->offset - stkframesize;
+      switch (code->datatype) {          /* store value into lhs  */
+       case INTEGER:
+         reg = getreg(INTEGER);
+         asmld(MOVL, offset, reg, sym->namestring);
+         break;
+         /* ...  */
+     };
+    }
     /*     ***** fix this *****   */
+      break;
+    case STRINGTOK:
+        /* Always EDI? */
+        reg = getreg(STRINGTYPE);
+        asmlitarg(nextlabel, EDI);
+        makeblit(code->stringval, nextlabel++);
       break;
     case OPERATOR:
     /*     ***** fix this *****   */
+      lhs = code->operands;
+      rhs = lhs->link;
+      reg = genarith(lhs);
+      reg2 = genarith(rhs);
+
+      if(code->whichval == PLUSOP) {
+       asmrr(ADDL, reg2, reg);
+      }
+
+      freeReg(reg2);
       break;
   };
   return reg;
@@ -133,7 +167,7 @@ int genarith(TOKEN code) {
 /* Generate code for a Statement from an intermediate-code form */
 void genc(TOKEN code) {  
  TOKEN tok, lhs, rhs;
- int reg, offs;
+ int reg, offs, reg2, extra;
  SYMBOL sym;
  if(DEBUGGEN) { 
    printf("genc\n");
@@ -148,6 +182,7 @@ void genc(TOKEN code) {
    case PROGNOP:
      tok = code->operands;
      while ( tok != NULL ) {  
+      // fprintf(stderr,"HERE\n");
        genc(tok);
        tok = tok->link;
      };
@@ -159,12 +194,55 @@ void genc(TOKEN code) {
      reg = genarith(rhs);              /* generate rhs into a register */
      sym = lhs->symentry;              /* assumes lhs is a simple var  */
      offs = sym->offset - stkframesize; /* net offset of the var   */
+     fprintf(stderr,"Offs is %d\n", offs);
      switch (code->datatype) {          /* store value into lhs  */
        case INTEGER:
          asmst(MOVL, reg, offs, lhs->stringval);
          break;
          /* ...  */
      };
+     /* HERE */
+     freeReg(reg);
+     if(code->link->whichval == GOTOOP) fprintf(stderr,"GOTO OP!\n");
      break;
+
+    case LABELOP:
+      asmlabel(code->datatype);
+      break;
+
+    case GOTOOP:
+      fprintf(stderr,"GOTO OP!\n");
+      asmjump(0, code->datatype);
+      break;
+
+    case IFOP:
+      code = code->operands;
+      lhs = code->operands;
+      rhs = lhs->link;
+      reg = genarith(lhs);
+      reg2 = genarith(rhs);
+
+      asmrr(CMPL,reg2,reg);
+      freeReg(reg);
+      freeReg(reg2);
+
+      asmjump(getop(code->whichval), nextlabel);
+      asmjump(0, nextlabel+1);
+
+      asmlabel(nextlabel++);
+      /* Reserve the next label */
+      extra = nextlabel++;
+
+      genc(code->link);
+      asmlabel(extra);
+      break;
+    case FUNCALLOP:
+      /* Call genarith for our arguments */
+      tok = code->operands->link;
+      reg = genarith(tok);
+      freeReg(reg);
+
+      asmcall(code->operands->stringval);
+      break;
  };
 }

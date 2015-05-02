@@ -38,6 +38,14 @@
 #include "symtab.h"
 #include "genasm.h"
 
+int opindex[28] = {PLUSOP,MINUSOP,TIMESOP,DIVIDEOP,ASSIGNOP,2,1,4,6,3,5,
+                  POINTEROP,DOTOP,ANDOP,OROP,NOTOP,DIVOP,MODOP,INOP,IFOP,GOTOOP,PROGNOP,
+                  LABELOP,FUNCALLOP,AREFOP,PROGRAMOP,FLOATOP,FIXOP,};
+
+int getop(int op) { 
+  return opindex[op - 1]; 
+}
+
 /* Print strings for registers */
 /* EBX is put in position 3 since it is callee-save */
 char* regpr[] = {"%eax", "%ecx", "%edx", "%ebx",

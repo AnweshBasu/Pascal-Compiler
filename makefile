@@ -152,3 +152,8 @@ clean:
 	rm *.o
 	rm pars1y
 	rm lexer
+
+build: compiler
+	./compiler | tee code.s
+	cc ./driver.c ./code.s -lm
+	./a.out | less

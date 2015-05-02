@@ -196,3 +196,4 @@ void makeflit(float f, int labeln);
 void makeblit(char s[], int labeln);
 /* Output literals and end material*/
 void outlits();
+int getop(int op);
