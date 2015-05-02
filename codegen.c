@@ -70,7 +70,7 @@ int getreg(int kind)
       /* Find first available register mark it used and return index */
     int i;
     if(kind == INTEGER || kind == BOOLETYPE) {
-      for(i = RBASE; i < RMAX; i++) {
+      for(i = RBASE; i <= RMAX; i++) {
         if(registers[i] == false) {
           registers[i] = true;
           return i;
@@ -79,7 +79,7 @@ int getreg(int kind)
       goto fail;
     }
     else if(kind == REAL || kind == STRINGTYPE || kind == POINTER) {
-      for(i = FBASE; i < FMAX; i++) {
+      for(i = FBASE; i <= FMAX; i++) {
         if(registers[i] == false) {
           registers[i] = true;
           return i;
@@ -126,12 +126,8 @@ int genarith(TOKEN code) {
         case REAL:
            fnum = code->realval;
            reg = getreg(REAL);
-           // if (fnum >= MINIMMEDIATE && fnum <= MAXIMMEDIATE)
            makeflit(fnum,nextlabel);
            asmldflit(MOVSD, nextlabel++, reg);
-          // exit(-1);
-            // asmimmed(MOVSD, fnum, reg);
-          /*     ***** fix this *****   */
           break;
       }
       break;
@@ -163,14 +159,122 @@ int genarith(TOKEN code) {
     /*     ***** fix this *****   */
       lhs = code->operands;
       rhs = lhs->link;
-      reg = genarith(lhs);
-      reg2 = genarith(rhs);
 
-      if(code->whichval == PLUSOP) {
-       asmrr(ADDL, reg2, reg);
+      if(code->whichval != FUNCALLOP) { 
+        reg = genarith(lhs);
+
+        if(rhs != NULL)
+          reg2 = genarith(rhs);
       }
 
-      freeReg(reg2);
+      if(code->whichval == PLUSOP) {
+        switch(code->datatype) {
+          case INTEGER:
+            asmrr(ADDL, reg2, reg);
+            break;
+          case REAL:
+            asmrr(ADDSD, reg2, reg);
+            break;
+        }
+      }
+
+      else if(code->whichval == MINUSOP) {
+        if(rhs == NULL) {
+          /* Unary minus */
+          switch(code->datatype) {
+            case INTEGER:
+              reg2 = getreg(INTEGER);
+              asmimmed(MOVL, 0, reg2);
+              asmrr(SUBL, reg, reg2);
+              reg ^= reg2;
+              reg2 ^= reg;
+              reg ^= reg2;
+              freeReg(reg2);
+              break;
+            case REAL:
+              reg2 = getreg(REAL);
+              asmfneg(reg,reg2);
+              freeReg(reg2);
+              break;
+          }
+        }
+        else {
+          switch(code->datatype) {
+            case INTEGER:
+              asmrr(SUBL, reg2, reg);
+              break;
+            case REAL:
+              asmrr(SUBSD, reg2, reg);
+              break;
+          }
+        }
+      }
+
+      else if(code->whichval == TIMESOP) {
+        switch(code->datatype) {
+          case INTEGER:
+            asmrr(IMULL, reg2, reg);
+            break;
+          case REAL:
+            asmrr(MULSD, reg2, reg);
+            break;
+        }
+      }
+
+      else if(code->whichval == FLOATOP) {
+        reg2 = getreg(REAL);
+        asmfloat(reg, reg2);
+        reg ^= reg2;
+        reg2 ^= reg;
+        reg ^= reg2;
+        freeReg(reg2);
+      }
+
+      else if(code->whichval == FIXOP) {
+        reg2 = getreg(INTEGER);
+        asmfix(reg,reg2);
+        reg ^= reg2;
+        reg2 ^= reg;
+        reg ^= reg2;
+        freeReg(reg2);
+      }
+
+      else if(code->whichval == FUNCALLOP) {
+        /* Call genarith for our arguments */
+        lhs = code->operands->link;
+        reg = genarith(lhs);
+
+        switch(lhs->datatype) {
+          case INTEGER:
+            asmrr(MOVL, reg, EDI);
+            break;
+        }
+          if(reg != XMM0 && registers[XMM0]) {
+            asmsttemp(XMM0);
+            
+            asmrr(MOVSD,reg,XMM0);
+            asmcall(code->operands->stringval);
+            asmrr(MOVSD,XMM0,reg);
+            asmldtemp(XMM0);
+          }
+
+          else if(reg != XMM0) {
+            asmrr(MOVSD,reg,XMM0);
+            freeReg(reg);
+            asmcall(code->operands->stringval);
+            registers[XMM0] = true;
+            reg = XMM0;
+          }
+
+          else {
+            asmcall(code->operands->stringval);
+            registers[XMM0] = true;
+            reg = XMM0;
+          }
+      }
+
+      if(rhs != NULL && code->whichval != FUNCALLOP)
+        freeReg(reg2);
       break;
   };
   return reg;
@@ -180,11 +284,13 @@ int genarith(TOKEN code) {
 void genc(TOKEN code) {  
  TOKEN tok, lhs, rhs;
  int reg, offs, reg2, extra;
+ int lab1,lab2,lab3,lab4;
  SYMBOL sym;
  if(DEBUGGEN) { 
    printf("genc\n");
    dbugprinttok(code);
  };
+ fprintf(stderr,"entering genc()\n");
  if(code->tokentype != OPERATOR) { 
    printf("Bad code token");
          dbugprinttok(code);
@@ -194,7 +300,6 @@ void genc(TOKEN code) {
    case PROGNOP:
      tok = code->operands;
      while ( tok != NULL ) {  
-      // fprintf(stderr,"HERE\n");
        genc(tok);
        tok = tok->link;
      };
@@ -218,7 +323,6 @@ void genc(TOKEN code) {
      };
      /* HERE */
      freeReg(reg);
-     if(code->link->whichval == GOTOOP) fprintf(stderr,"GOTO OP!\n");
      break;
 
     case LABELOP:
@@ -227,7 +331,7 @@ void genc(TOKEN code) {
 
     case GOTOOP:
       fprintf(stderr,"GOTO OP!\n");
-      asmjump(0, code->datatype);
+      asmjump(0, code->operands->intval);
       break;
 
     case IFOP:
@@ -241,15 +345,21 @@ void genc(TOKEN code) {
       freeReg(reg);
       freeReg(reg2);
 
-      asmjump(getop(code->whichval), nextlabel);
-      asmjump(0, nextlabel+1);
+      lab1 = nextlabel++;
+      asmjump(getop(code->whichval), lab1);
 
-      asmlabel(nextlabel++);
-      /* Reserve the next label */
-      extra = nextlabel++;
+      /* Else part */
+      if(code->link->link != NULL) {
+        genc(code->link->link);
+      }
+      lab2 = nextlabel++;
+      asmjump(0, lab2);
+
+      asmlabel(lab1);
 
       genc(code->link);
-      asmlabel(extra);
+
+      asmlabel(lab2);
       break;
     case FUNCALLOP:
       /* Call genarith for our arguments */
@@ -267,4 +377,5 @@ void genc(TOKEN code) {
       asmcall(code->operands->stringval);
       break;
  };
+ fprintf(stderr,"exiting genc()\n");
 }

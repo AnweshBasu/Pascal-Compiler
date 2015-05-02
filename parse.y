@@ -188,8 +188,8 @@ TOKEN parseresult;
   factor     :  LPAREN expr RPAREN             { $$ = $2; }
              |  variable
              |  NUMBER
-             |  MINUS variable {opscons($1,$2);}
-             |  MINUS NUMBER     {opscons($1,$2);}
+             |  MINUS variable {$$ = unop($1,$2);}
+             |  MINUS NUMBER     {$$ = unop($1,$2);}
              |  STRING
              |  function 
              ;
@@ -311,6 +311,9 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
       else if (lhs->datatype == REAL && rhs->datatype == INTEGER) {
         rhs = makefloat(rhs);
         op->datatype = REAL;
+      }
+      else if (lhs->datatype == rhs->datatype) {
+        op->datatype = lhs->datatype;
       }
     }
 
@@ -845,6 +848,13 @@ TOKEN opscons(TOKEN minus, TOKEN value) {
   /* Add a unary minus to a value */
   minus->operands = value;
   return minus;
+}
+
+TOKEN unop(TOKEN op, TOKEN value) {
+  op->operands = value;
+  op->datatype = value->datatype;
+
+  return op;
 }
 
 /* Adds an operands to the end of the list instead of the top */
