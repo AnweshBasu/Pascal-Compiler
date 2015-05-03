@@ -69,7 +69,7 @@ int getreg(int kind)
       /* Find if we need 32 bit or 64 bit register */
       /* Find first available register mark it used and return index */
     int i;
-    if(kind == INTEGER || kind == BOOLETYPE) {
+    if(kind == INTEGER || kind == BOOLETYPE || kind == POINTER) {
       for(i = RBASE; i <= RMAX; i++) {
         if(registers[i] == false) {
           registers[i] = true;
@@ -78,7 +78,7 @@ int getreg(int kind)
       }
       goto fail;
     }
-    else if(kind == REAL || kind == STRINGTYPE || kind == POINTER) {
+    else if(kind == REAL || kind == STRINGTYPE) {
       for(i = FBASE; i <= FMAX; i++) {
         if(registers[i] == false) {
           registers[i] = true;
@@ -249,28 +249,33 @@ int genarith(TOKEN code) {
             asmrr(MOVL, reg, EDI);
             break;
         }
-          if(reg != XMM0 && registers[XMM0]) {
-            asmsttemp(XMM0);
-            
-            asmrr(MOVSD,reg,XMM0);
-            asmcall(code->operands->stringval);
-            asmrr(MOVSD,XMM0,reg);
-            asmldtemp(XMM0);
-          }
+        if(lhs->datatype == REAL) {
+            if(reg != XMM0 && registers[XMM0]) {
+              asmsttemp(XMM0);
+              
+              asmrr(MOVSD,reg,XMM0);
+              asmcall(code->operands->stringval);
+              asmrr(MOVSD,XMM0,reg);
+              asmldtemp(XMM0);
+            }
 
-          else if(reg != XMM0) {
-            asmrr(MOVSD,reg,XMM0);
-            freeReg(reg);
-            asmcall(code->operands->stringval);
-            registers[XMM0] = true;
-            reg = XMM0;
-          }
+            else if(reg != XMM0) {
+              asmrr(MOVSD,reg,XMM0);
+              freeReg(reg);
+              asmcall(code->operands->stringval);
+              registers[XMM0] = true;
+              reg = XMM0;
+            }
 
-          else {
-            asmcall(code->operands->stringval);
-            registers[XMM0] = true;
-            reg = XMM0;
+            else {
+              asmcall(code->operands->stringval);
+              registers[XMM0] = true;
+              reg = XMM0;
+            }
           }
+        else {
+          asmcall(code->operands->stringval);
+        }
       }
 
       if(rhs != NULL && code->whichval != FUNCALLOP)
@@ -311,6 +316,10 @@ void genc(TOKEN code) {
      reg = genarith(rhs);              /* generate rhs into a register */
      sym = lhs->symentry;              /* assumes lhs is a simple var  */
      offs = sym->offset - stkframesize; /* net offset of the var   */
+      if(rhs->operands != NULL && !strcmp(rhs->operands->stringval,"new")) {
+          asmst(MOVQ,reg, offs, lhs->stringval);
+      }
+
      fprintf(stderr,"Offs is %d\n", offs);
      switch (lhs->datatype) {          /* store value into lhs  */
         case INTEGER:

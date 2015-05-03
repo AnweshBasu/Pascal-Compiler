@@ -1,19 +1,11 @@
 (* trivb.pas *)
-program graph1(output);
-const d = 0.0625; {1/16, 16 lines for interval [x,x+1]}
-      s = 32; {32 character widths for interval [y,y+1]}
-      h = 34; {character position of x-axis}
-      c = 6.28318; {2*pi}  lim = 32;
-var x,y : real;  i,n : integer;
+{program graph1(output);
+var i,lim : integer;
 begin
+   lim := 7;
    for i := 0 to lim do
-      begin x := d*i; y := exp(-x)*sin(c*x);
-      n := round(s*y) + h;
-      repeat write(' ');  n := n-1
-      until n=0;
       writeln('*')
-   end
-end.
+end.}
 
 
 (* graph1.pas *)
@@ -88,3 +80,25 @@ begin
    writeln(fred^.location.im);
    if sum < 3 then goto 1776
 end.}
+
+program graph1(output);
+label 1492, 1776;
+type complex = record re, im: real end;
+     color = (red, white, blue);
+     pp = ^ person;
+     person = record age:      integer;
+                     friend:   pp;
+                     location: complex;
+                     favorite: color;
+                     salary:   real end;
+var c,d: complex; i, sum: integer;
+    ac: array[1..10] of complex;
+    aco: array[1..10, color] of color;
+    john, mary, fred, ptr: pp;
+    people: array[1..20] of person;
+begin
+  new(john);
+   new(mary);
+   new(fred);
+  i := 0
+end.
