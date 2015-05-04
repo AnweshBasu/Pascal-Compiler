@@ -194,7 +194,7 @@ TOKEN parseresult;
              |  function 
              ;
   identifier : IDENTIFIER {$$ = findidentifier($1); }
-             | NIL { $$ = constant(0); }
+             | NIL { $$ = makeNil(); }
              ;
   variable   : identifier {$$ = $1; }
              | variable DOT IDENTIFIER { $$ = reducedot($1,$2,$3);}
@@ -260,7 +260,7 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
     }
 
     /* OPTIMIZATION : Coalesce children's add operations */
-    else if((lhs->tokentype == NUMBERTOK && lhs->datatype == INTEGER || rhs->tokentype == NUMBERTOK && rhs->datatype == INTEGER) && (op->whichval == PLUSOP /*|| op->whichval == MINUSOP*/)) {
+    else if((lhs->tokentype == NUMBERTOK && lhs->datatype == INTEGER || rhs->tokentype == NUMBERTOK && rhs->datatype == INTEGER) && (op->whichval == PLUSOP)) {
       int ourVal;
       TOKEN other, otherSide,otherlhs,otherrhs,otherop;
       if(lhs->tokentype == NUMBERTOK && lhs->datatype == INTEGER) {
@@ -277,7 +277,7 @@ TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
         otherrhs = other->operands->link;
         otherop = other;
 
-        if((otherlhs->tokentype == NUMBERTOK && otherlhs->datatype == INTEGER || otherrhs->tokentype == NUMBERTOK && otherrhs->datatype == INTEGER) && (otherop->whichval == PLUSOP /*|| other->op->whichval == MINUSOP*/)) {
+        if((otherlhs->tokentype == NUMBERTOK && otherlhs->datatype == INTEGER || otherrhs->tokentype == NUMBERTOK && otherrhs->datatype == INTEGER) && (otherop->whichval == PLUSOP)) {
           if(otherlhs->tokentype == NUMBERTOK && otherlhs->datatype == INTEGER)
             otherSide = otherlhs;
           else
@@ -658,6 +658,7 @@ TOKEN dopoint(TOKEN var, TOKEN tok) {
 TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   SYMBOL record = var->symtype;
   bool ispointer = false;
+  // if(var->link != NULL)
 
   /* Skip to the pointer's RECORDSYM symbol */
   if(record->kind == POINTERSYM) {
@@ -701,6 +702,7 @@ TOKEN reducedot(TOKEN var, TOKEN dot, TOKEN field) {
   dot->operands->link = constant(offset);
 
   dot->symtype = skipTypes(record->datatype);
+  // dot->symentry = record;
   return dot;
 }
 
@@ -1063,6 +1065,15 @@ TOKEN copytok(TOKEN tok) {
   ret->link = NULL;
 
   return ret;
+}
+
+TOKEN makeNil() {
+  TOKEN tok = talloc();
+  tok->tokentype = NUMBERTOK;
+  tok->datatype = POINTER;
+  tok->intval = 0;
+
+  return tok;
 }
 
 int wordaddress(int n, int wordsize)

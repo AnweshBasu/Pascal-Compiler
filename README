@@ -2,6 +2,31 @@ Name: David Parker
 EID: dp24559
 
 
+
+Codegen Optimizations:
+***************************************************************************************
+Adds the offset for the array reference without doing another load
+1) Array offset optimization:
+	
+	If there is an AREF that has a constant number for an offset. We do not need to load that constant number
+	int a register then add it to our address for our AREF. By simply combining it into the register that contains
+	the address we can save a few operations.
+
+	Example:
+
+	Novak's output:
+	movl	$96,%eax         	#  96 -> %eax
+	cltq	                  	#  sign-extend
+	movsd	%xmm0,-1296(%rbp,%rax)	#  %xmm0 -> ac[%rax]
+
+	Becomes:
+	movsd	%xmm0,-1200(%rbp)     	#  %xmm0 -> ac
+
+***************************************************************************************
+
+
+
+
 Parser ALL Optimizations:
 ***************************************************************************************
 1) 	AREF combination optimization:

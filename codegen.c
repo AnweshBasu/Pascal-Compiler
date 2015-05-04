@@ -1,3 +1,7 @@
+/* NAME: David Parker
+   EID: dp24559
+                    /*
+
 /* codgen.c       Generate Assembly Code for x86         15 May 13   */
 
 /* Copyright (c) 2013 Gordon S. Novak Jr. and The University of Texas at Austin
@@ -61,7 +65,6 @@ void gencode(TOKEN pcode, int varsize, int maxlabel)
      asmexit(name->stringval);
   }
 
-/* Trivial version: always returns RBASE + 0 */
 /* Get a register.   */
 /* Need a type parameter or two versions for INTEGER or REAL */
 int getreg(int kind)
@@ -129,13 +132,18 @@ int genarith(TOKEN code) {
            makeflit(fnum,nextlabel);
            asmldflit(MOVSD, nextlabel++, reg);
           break;
+        case POINTER:
+          num = code->intval;
+          reg = getreg(POINTER);
+          asmimmed(MOVQ, num, reg);
+          break;
       }
       break;
     case IDENTIFIERTOK:
     {
       SYMBOL sym = searchst(code->stringval);
       int offset = sym->offset - stkframesize;
-      switch (code->datatype) {          /* store value into lhs  */
+      switch (code->datatype) { 
         case INTEGER:
           reg = getreg(INTEGER);
           asmld(MOVL, offset, reg, sym->namestring);
@@ -144,29 +152,32 @@ int genarith(TOKEN code) {
           reg = getreg(REAL);
           asmld(MOVSD, offset, reg, sym->namestring);
           break;
-         /* ...  */
+        case POINTER:
+          reg = getreg(POINTER);
+          asmld(MOVQ, offset, reg, sym->namestring);
+          break;
      };
     }
-    /*     ***** fix this *****   */
       break;
     case STRINGTOK:
-        /* Always EDI? */
+      /* String constants always get moved into EDI (volatile register) */
         reg = getreg(STRINGTYPE);
         asmlitarg(nextlabel, EDI);
         makeblit(code->stringval, nextlabel++);
       break;
     case OPERATOR:
-    /*     ***** fix this *****   */
       lhs = code->operands;
       rhs = lhs->link;
 
+      /* Funcalls do their own lhs and rhs recursion */
       if(code->whichval != FUNCALLOP) { 
         reg = genarith(lhs);
 
-        if(rhs != NULL)
+        if(rhs != NULL && !(lhs->whichval == POINTEROP && rhs->tokentype == NUMBERTOK))
           reg2 = genarith(rhs);
       }
 
+      /* Add */
       if(code->whichval == PLUSOP) {
         switch(code->datatype) {
           case INTEGER:
@@ -178,6 +189,7 @@ int genarith(TOKEN code) {
         }
       }
 
+      /* Subtract */
       else if(code->whichval == MINUSOP) {
         if(rhs == NULL) {
           /* Unary minus */
@@ -210,6 +222,7 @@ int genarith(TOKEN code) {
         }
       }
 
+      /* Multiply */
       else if(code->whichval == TIMESOP) {
         switch(code->datatype) {
           case INTEGER:
@@ -221,8 +234,10 @@ int genarith(TOKEN code) {
         }
       }
 
+      /* Convert integer to a floating point number */
       else if(code->whichval == FLOATOP) {
         reg2 = getreg(REAL);
+        /* Get a float register and move the integer value into it */
         asmfloat(reg, reg2);
         reg ^= reg2;
         reg2 ^= reg;
@@ -230,8 +245,10 @@ int genarith(TOKEN code) {
         freeReg(reg2);
       }
 
+      /* Convert a floating point number into an integer */
       else if(code->whichval == FIXOP) {
         reg2 = getreg(INTEGER);
+        /* Get an integer register and move the float value into it */
         asmfix(reg,reg2);
         reg ^= reg2;
         reg2 ^= reg;
@@ -249,6 +266,8 @@ int genarith(TOKEN code) {
             asmrr(MOVL, reg, EDI);
             break;
         }
+
+        /* TODO: Optimization for only loading if we return true from funcallin */
         if(lhs->datatype == REAL) {
             if(reg != XMM0 && registers[XMM0]) {
               asmsttemp(XMM0);
@@ -278,7 +297,40 @@ int genarith(TOKEN code) {
         }
       }
 
-      if(rhs != NULL && code->whichval != FUNCALLOP)
+      else if(code->whichval == AREFOP) {
+        /* AREF needs to be loaded into a register from the given address */
+        int offs = code->operands->link->intval;
+        switch (code->datatype) {
+          case INTEGER:
+            reg2 = getreg(INTEGER);
+            asmldr(MOVL, offs, reg, reg2, "^.");
+            reg ^= reg2;
+            reg2 ^= reg;
+            reg ^= reg2;
+            break;
+          case REAL:
+            reg2 = getreg(REAL);
+            asmldr(MOVSD, offs, reg, reg2, "^.");
+            reg ^= reg2;
+            reg2 ^= reg;
+            reg ^= reg2;
+            break;
+          case POINTER:
+            reg2 = getreg(POINTER);
+            asmldr(MOVQ, offs, reg, reg2, "^.");
+            reg ^= reg2;
+            reg2 ^= reg;
+            reg ^= reg2;
+            break;
+       };
+      }
+
+      else if (code->whichval == POINTEROP) {
+        /* NO OP */
+        /* Pointer is loaded in AREF, since a pointer cannot exist without an AREF */
+      }
+
+      if(rhs != NULL && code->whichval != FUNCALLOP && code->whichval != POINTEROP)
         freeReg(reg2);
       break;
   };
@@ -295,7 +347,6 @@ void genc(TOKEN code) {
    printf("genc\n");
    dbugprinttok(code);
  };
- fprintf(stderr,"entering genc()\n");
  if(code->tokentype != OPERATOR) { 
    printf("Bad code token");
          dbugprinttok(code);
@@ -310,36 +361,101 @@ void genc(TOKEN code) {
      };
      break;
 
-   case ASSIGNOP:                   /* Trivial version: handles I := e */
+   case ASSIGNOP:      
      lhs = code->operands;
      rhs = lhs->link;
-     reg = genarith(rhs);              /* generate rhs into a register */
-     sym = lhs->symentry;              /* assumes lhs is a simple var  */
-     offs = sym->offset - stkframesize; /* net offset of the var   */
-      if(rhs->operands != NULL && !strcmp(rhs->operands->stringval,"new")) {
-          asmst(MOVQ,reg, offs, lhs->stringval);
-      }
+     reg = genarith(rhs);       
 
-     fprintf(stderr,"Offs is %d\n", offs);
-     switch (lhs->datatype) {          /* store value into lhs  */
-        case INTEGER:
-          asmst(MOVL, reg, offs, lhs->stringval);
-          break;
-        case REAL:
-          asmst(MOVSD, reg, offs, lhs->stringval);
-          break;
-         /* ...  */
-     };
-     /* HERE */
+     /* LHS is an AREF and it's address is a pointer, call genarith for pointer op's */
+     if(lhs->tokentype == OPERATOR && lhs->whichval == AREFOP && lhs->operands->tokentype != IDENTIFIERTOK) {
+      reg2 = genarith(lhs->operands);
+      sym = lhs->operands->symentry;
+      offs = lhs->operands->link->intval;
+      switch (rhs->datatype) { 
+          case INTEGER:
+            asmstr(MOVL, reg, offs, reg2, "^. ");
+            break;
+          case REAL:
+            asmstr(MOVSD, reg, offs, reg2, "^. ");
+            break;
+          case POINTER:
+            asmstr(MOVQ,reg, offs, reg2, "^. ");
+            break;
+       };
+       if(reg != reg2)
+        freeReg(reg2);
+     }
+
+     /* LHS is an AREF and it's address is an identifer with a variable offset, the offset is an expresion tree
+        and genarith needs to be called on it, returning the offset into reg2    */
+     else if(lhs->tokentype == OPERATOR && lhs->whichval == AREFOP && lhs->operands->tokentype == IDENTIFIERTOK &&
+            lhs->operands->link->tokentype != NUMBERTOK){
+          reg2 = genarith(lhs->operands->link);
+          sym = lhs->operands->symentry;
+          offs = sym->offset - stkframesize;
+
+          switch (rhs->datatype) {          /* store value into lhs  */
+          case INTEGER:
+            asmop(CLTQ);
+            asmstrr(MOVL, reg, offs, reg2, lhs->operands->stringval);
+            break;
+          case REAL:
+            asmop(CLTQ);
+            asmstrr(MOVSD, reg, offs, reg2, lhs->operands->stringval);
+            break;
+          case POINTER:
+            asmop(CLTQ);
+            asmstrr(MOVQ,reg, offs, reg2, lhs->operands->stringval);
+            break;
+       };
+        if(reg != reg2)
+          freeReg(reg2);
+     }
+      /* LHS is an AREF and it's address is an identifer is variable with a constant number for offset */
+      /* Optimization Adds the offset for the array reference without doing another load */
+     else if (lhs->tokentype == OPERATOR && lhs->whichval == AREFOP && lhs->operands->tokentype == IDENTIFIERTOK &&
+              lhs->operands->link->tokentype == NUMBERTOK) {
+        sym = lhs->operands->symentry;
+        offs = sym->offset - stkframesize + lhs->operands->link->intval;
+        switch (lhs->datatype) {          /* store value into lhs  */
+          case INTEGER:
+            asmst(MOVL, reg, offs, lhs->stringval);
+            break;
+          case REAL:
+            asmst(MOVSD, reg, offs, lhs->stringval);
+            break;
+          case POINTER:
+            asmst(MOVQ,reg, offs, lhs->stringval);
+            break;
+       };
+     }
+
+   /* Regular variable assignment */
+   else {
+        sym = lhs->symentry;
+        offs = sym->offset - stkframesize;
+
+       switch (lhs->datatype) {          /* store value into lhs  */
+          case INTEGER:
+            asmst(MOVL, reg, offs, lhs->stringval);
+            break;
+          case REAL:
+            asmst(MOVSD, reg, offs, lhs->stringval);
+            break;
+          case POINTER:
+            asmst(MOVQ,reg, offs, lhs->stringval);
+            break;
+       };
+     }
+
      freeReg(reg);
      break;
 
     case LABELOP:
-      asmlabel(code->datatype);
+      asmlabel(code->operands->intval);
       break;
 
     case GOTOOP:
-      fprintf(stderr,"GOTO OP!\n");
       asmjump(0, code->operands->intval);
       break;
 
@@ -350,7 +466,18 @@ void genc(TOKEN code) {
       reg = genarith(lhs);
       reg2 = genarith(rhs);
 
-      asmrr(CMPL,reg2,reg);
+      switch(lhs->datatype) {
+        case INTEGER:
+          asmrr(CMPL,reg2,reg);
+          break;
+        case REAL:
+          asmrr(CMPSD,reg2,reg);
+          break;
+        case POINTER:
+          asmrr(CMPQ,reg2,reg);
+          break;
+      }
+
       freeReg(reg);
       freeReg(reg2);
 
@@ -386,5 +513,4 @@ void genc(TOKEN code) {
       asmcall(code->operands->stringval);
       break;
  };
- fprintf(stderr,"exiting genc()\n");
 }

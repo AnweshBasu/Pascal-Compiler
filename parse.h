@@ -233,3 +233,4 @@ SYMBOL skipTypes(SYMBOL sym);
 int getArefType(TOKEN tok);
 int getLabelNum(int num);
 TOKEN unop(TOKEN op, TOKEN value);
+TOKEN makeNil();
