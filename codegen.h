@@ -42,7 +42,7 @@ void savereg();
 void restorereg();
 
 /* test if there is a function call within code: 1 if true, else 0 */
-int funcallin(TOKEN code);
+bool funcallin(TOKEN code);
 
 /* find the op number that is equivalent to named function, if any */
 int findfunop(char str[]);

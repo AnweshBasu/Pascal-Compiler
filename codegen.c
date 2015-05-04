@@ -271,7 +271,6 @@ int genarith(TOKEN code) {
         if(lhs->datatype == REAL) {
             if(reg != XMM0 && registers[XMM0]) {
               asmsttemp(XMM0);
-              
               asmrr(MOVSD,reg,XMM0);
               asmcall(code->operands->stringval);
               asmrr(MOVSD,XMM0,reg);
@@ -513,4 +512,17 @@ void genc(TOKEN code) {
       asmcall(code->operands->stringval);
       break;
  };
+}
+
+/* Looks through all of the code tree to see if a function exists */
+bool funcallin(TOKEN code) {
+  if(code->tokentype == OPERATOR && code->whichval == FUNCALLOP) return true;
+  if(code->operands != NULL) {
+    if(funcallin(code->operands)) return true;
+  }
+  if(code->link != NULL) {
+    if(funcallin(code->link)) return true;
+  }
+
+  return false;
 }
